@@ -1,0 +1,122 @@
+# example_help.yaml
+# ==================
+# Fully annotated configuration file for matplotlib-help.
+#
+# Load this in Python with:
+#
+#   from matplotlib_help_config import load_manager
+#   help_mgr = load_manager(fig, "example_help.yaml")
+#   help_mgr.attach()
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# TOP-LEVEL KEYS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Window / page heading (required).
+title: "My Application — Keyboard Shortcuts"
+
+# Key that opens the help window (default: h).
+trigger_key: h
+
+# Small note at the bottom of the window (optional).
+# If omitted, a default "press h to reopen" hint is used.
+footer: "My App v1.0  •  press h to reopen"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+# Each section has a title bar followed by a list of key bindings.
+# Sections appear in the order listed here.
+
+sections:
+
+  # ── Section 1 ─────────────────────────────────────────────────────────────
+  - title: Help
+
+    # accent: colour of the section title bar and left-edge stripe.
+    #
+    # Named colours (from the built-in palette):
+    #   blue | purple | green | yellow | orange | red | cyan | muted
+    #
+    # Or any CSS hex colour: "#f0a040", "#39c5cf", etc.
+    # If omitted, defaults to "purple".
+    accent: blue
+
+    bindings:
+      # Each binding needs a key label and a desc(ription).
+      - key: h
+        desc: Open / close this help window
+
+  # ── Section 2 ─────────────────────────────────────────────────────────────
+  - title: Navigation
+    accent: purple        # named palette colour
+
+    bindings:
+      - key: "q / Escape"   # quote strings that contain special chars
+        desc: Close the figure
+
+      # Directional arrows work fine — no special escaping needed in YAML.
+      - key: "← → ↑ ↓"
+        desc: Pan the active axes
+
+      - key: "Home / r"
+        desc: Reset view to original limits
+
+    # note: optional italicised callout shown below the bindings.
+    # Useful for extra context or caveats.
+    note: Click a subplot first to make it the active axes.
+
+  # ── Section 3 ─────────────────────────────────────────────────────────────
+  - title: Zoom & Pan Tools
+    accent: cyan
+
+    bindings:
+      - key: z
+        desc: Zoom mode  (drag a rectangle to zoom)
+      - key: p
+        desc: Pan mode   (drag to pan)
+      - key: "+ / -"
+        desc: Zoom in / zoom out
+      - key: "o"
+        desc: Zoom to last rectangle
+
+    note: >
+      Pan and Zoom are toggled — press the same key again to exit the mode.
+      Hold Shift to constrain zoom to a single axis.
+
+  # ── Section 4 ─────────────────────────────────────────────────────────────
+  - title: Appearance
+    accent: green
+
+    bindings:
+      - key: g
+        desc: Toggle major grid
+      - key: G
+        desc: Toggle minor grid
+      - key: l
+        desc: Toggle Y-axis log scale
+      - key: L
+        desc: Toggle X-axis log scale
+
+  # ── Section 5 ─────────────────────────────────────────────────────────────
+  - title: Export
+    accent: orange
+
+    bindings:
+      - key: s
+        desc: Save figure  (opens save dialog)
+      - key: "Ctrl+C"
+        desc: Copy figure to clipboard  (if supported by backend)
+
+  # ── Section 6 ─────────────────────────────────────────────────────────────
+  # Example showing a warning-style note in red.
+  - title: Experimental
+    accent: red
+
+    bindings:
+      - key: "Shift+R"
+        desc: Reload data and redraw
+      - key: "Ctrl+Alt+D"
+        desc: Dump figure state to console
+
+    note: These shortcuts may change in future versions.

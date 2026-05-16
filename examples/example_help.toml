@@ -1,0 +1,54 @@
+# example_help.toml
+# ==================
+# TOML equivalent of example_help.yaml  (trimmed to three sections for brevity).
+# Requires Python ≥ 3.11 (stdlib tomllib) or  pip install tomli  on older Pythons.
+#
+# Load with:
+#   from matplotlib_help_config import load_manager
+#   help_mgr = load_manager(fig, "example_help.toml")
+
+title       = "My Application — Keyboard Shortcuts"
+trigger_key = "h"
+footer      = "My App v1.0  •  press h to reopen"
+
+[[sections]]
+title  = "Help"
+accent = "blue"
+
+  [[sections.bindings]]
+  key  = "h"
+  desc = "Open / close this help window"
+
+[[sections]]
+title  = "Navigation"
+accent = "purple"
+note   = "Click a subplot first to make it the active axes."
+
+  [[sections.bindings]]
+  key  = "q / Escape"
+  desc = "Close the figure"
+
+  [[sections.bindings]]
+  key  = "← → ↑ ↓"
+  desc = "Pan the active axes"
+
+  [[sections.bindings]]
+  key  = "Home / r"
+  desc = "Reset view to original limits"
+
+[[sections]]
+title  = "Zoom & Pan Tools"
+accent = "cyan"
+note   = "Pan and Zoom are toggled — press the same key again to exit."
+
+  [[sections.bindings]]
+  key  = "z"
+  desc = "Zoom mode  (drag a rectangle to zoom)"
+
+  [[sections.bindings]]
+  key  = "p"
+  desc = "Pan mode   (drag to pan)"
+
+  [[sections.bindings]]
+  key  = "+ / -"
+  desc = "Zoom in / zoom out"
