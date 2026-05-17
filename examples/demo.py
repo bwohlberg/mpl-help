@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from matplotlib_help_config import load_manager, loads_manager, manager_from_dict
+from mpl_help import load_manager, loads_manager, manager_from_dict
 
 
 # ── sample figure ─────────────────────────────────────────────────────────────
