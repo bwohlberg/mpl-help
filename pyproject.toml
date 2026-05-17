@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "mpl-help"
-version         = "0.1.0"
+version         = "0.1.0rc1"
 description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
 license         = { file = "LICENSE" }
