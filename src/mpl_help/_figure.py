@@ -235,18 +235,6 @@ def _build_help_figure(
         transform=ax.transData,
     )
     ax.text(
-        0.04 + len(title) * 0.0115 + 0.045,
-        n_rows - 0.75,
-        "  HELP  ",
-        fontsize=6.5, fontweight="bold", color=C["top_bar"],
-        va="center", ha="left",
-        bbox=dict(
-            boxstyle="round,pad=0.25", facecolor="none",
-            edgecolor=C["top_bar"], linewidth=0.8,
-        ),
-        transform=ax.transData,
-    )
-    ax.text(
         0.97, n_rows - 0.75,
         "press  h / q / Esc  to close",
         fontsize=7, color=C["muted"],
