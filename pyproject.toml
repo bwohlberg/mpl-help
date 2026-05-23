@@ -2,98 +2,42 @@
 requires      = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-# ── project metadata ──────────────────────────────────────────────────────────
-
 [project]
 name            = "mpl-help"
-version         = "0.1.0rc1"
+version         = "0.1.0rc2"
 description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
 license         = { file = "LICENSE" }
 requires-python = ">=3.9"
-
-authors = [
-    { name = "Your Name", email = "you@example.com" },
-]
-
-keywords = [
-    "matplotlib", "help", "keyboard shortcuts",
-    "visualisation", "GUI",
-]
-
-classifiers = [
+authors         = [{ name = "Your Name", email = "you@example.com" }]
+keywords        = ["matplotlib", "help", "keyboard shortcuts"]
+classifiers     = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
-
-# ── runtime dependencies ──────────────────────────────────────────────────────
-
-dependencies = [
-    "matplotlib>=3.5",
-]
-
-# ── optional dependencies ─────────────────────────────────────────────────────
+dependencies = ["matplotlib>=3.5"]
 
 [project.optional-dependencies]
-
-# pip install mpl-help[yaml]
-yaml = [
-    "pyyaml>=6.0",
-]
-
-# pip install mpl-help[toml]   (only needed on Python < 3.11)
-toml = [
-    "tomli>=2.0; python_version < '3.11'",
-]
-
-# pip install mpl-help[config]  — everything needed for all config formats
-config = [
-    "pyyaml>=6.0",
-    "tomli>=2.0; python_version < '3.11'",
-]
-
-# pip install mpl-help[dev]
-dev = [
-    "pyyaml>=6.0",
-    "tomli>=2.0; python_version < '3.11'",
-    "pytest>=7",
-    "pytest-mpl",
-    "build",
-    "twine",
-]
-
-# ── URLs ──────────────────────────────────────────────────────────────────────
+yaml   = ["pyyaml>=6.0"]
+toml   = ["tomli>=2.0; python_version < '3.11'"]
+config = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'"]
+dev    = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'",
+          "pytest>=7", "build", "twine"]
 
 [project.urls]
 Homepage      = "https://github.com/yourname/mpl-help"
-Repository    = "https://github.com/yourname/mpl-help"
 "Bug Tracker" = "https://github.com/yourname/mpl-help/issues"
-
-# ── package discovery ─────────────────────────────────────────────────────────
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"mpl_help" = ["py.typed"]    # PEP 561 — marks package as typed
-
-# ── pytest ────────────────────────────────────────────────────────────────────
+"mpl_help" = ["py.typed"]
 
 [tool.pytest.ini_options]
-testpaths    = ["tests"]
-addopts      = "-v"
-
-# ── optional: ruff linting (remove if not using ruff) ────────────────────────
-
-[tool.ruff]
-line-length    = 95
-target-version = "py39"
+testpaths = ["tests"]
+addopts   = "-v"

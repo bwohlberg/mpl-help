@@ -1,72 +1,18 @@
 """
-matplotlib_help_config.py
-=========================
-Format-agnostic configuration loader for the matplotlib help system.
+mpl_help._config
+================
+Format-agnostic configuration loader for mpl-help.
 
 Supported formats
 -----------------
 YAML  (.yaml / .yml)   requires  PyYAML  (``pip install pyyaml``)
 TOML  (.toml)          stdlib ``tomllib`` (Python ≥ 3.11) or
-                       ``tomli``  (``pip install tomli``)  for older Pythons
-JSON  (.json)          stdlib ``json`` — always available, zero extra deps
+                       ``tomli``  (``pip install tomli``)
+JSON  (.json)          stdlib ``json`` — always available
 
-Loading
--------
-From a file (format auto-detected from extension)::
-
-    from matplotlib_help_config import load_manager
-    help_mgr = load_manager(fig, "my_app_help.yaml")
-    help_mgr.attach()
-
-From an in-process string (format must be stated)::
-
-    from matplotlib_help_config import loads_manager
-    help_mgr = loads_manager(fig, yaml_text, fmt="yaml")
-    help_mgr.attach()
-
-From a dict already in memory::
-
-    from matplotlib_help_config import manager_from_dict
-    help_mgr = manager_from_dict(fig, config_dict)
-    help_mgr.attach()
-
-Backends
---------
-Pass ``backend="figure"`` (default), ``"html"``, or ``"tkinter"``
-to select which HelpManager implementation is used.
-
-Config schema
--------------
-See ``example_help.yaml`` for a fully annotated example.  The minimum
-valid config is::
-
-    title: My App Help
-    sections:
-      - title: General
-        bindings:
-          - key: h
-            desc: Show this help window
-
-Top-level keys
-~~~~~~~~~~~~~~
-title       str   Window / page heading.
-trigger_key str   Key that opens the help window  (default: "h").
-footer      str   Small note at the bottom        (default: auto).
-sections    list  Ordered list of section blocks  (required).
-
-Section keys
-~~~~~~~~~~~~
-title    str   Section heading text  (required).
-accent   str   Accent colour — hex (#rrggbb) or a palette name:
-               blue | purple | green | yellow | orange | red | cyan | muted
-               (default: "purple")
-bindings list  List of {key, desc} pairs  (required).
-note     str   Optional explanatory note shown below the bindings.
-
-Binding keys
-~~~~~~~~~~~~
-key   str  Key label, e.g. "h", "Ctrl+Z", "q / Escape", "← → ↑ ↓"
-desc  str  Human-readable description of the action.
+The theme and palette are presentation concerns and are therefore
+*not* part of the config file format.  Pass them as arguments to
+the loader functions or directly to :class:`~mpl_help.HelpManager`.
 """
 
 from __future__ import annotations
@@ -74,24 +20,9 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
-
-# ---------------------------------------------------------------------------
-# Palette name → hex  (mirrors the palette in matplotlib_help_figure.py)
-# ---------------------------------------------------------------------------
-NAMED_COLOURS: Dict[str, str] = {
-    "blue":   "#58a6ff",
-    "purple": "#bc8cff",
-    "green":  "#3fb950",
-    "yellow": "#d29922",
-    "orange": "#ffa657",
-    "red":    "#f85149",
-    "cyan":   "#39c5cf",
-    "muted":  "#8b949e",
-}
-
-Backend = Literal["figure"]
+from mpl_help._figure import ACCENT_NAMES
 
 
 # ---------------------------------------------------------------------------
@@ -100,17 +31,16 @@ Backend = Literal["figure"]
 
 def _parse_yaml(text: str) -> dict:
     try:
-        import yaml  # PyYAML
+        import yaml
     except ImportError as exc:
         raise ImportError(
             "PyYAML is required for YAML config files.\n"
-            "Install it with:  pip install pyyaml"
+            "Install it with:  pip install 'mpl-help[yaml]'"
         ) from exc
     return yaml.safe_load(text)
 
 
 def _parse_toml(text: str) -> dict:
-    # tomllib is stdlib in Python 3.11+; fall back to tomli for older versions.
     if sys.version_info >= (3, 11):
         import tomllib
         return tomllib.loads(text)
@@ -120,7 +50,7 @@ def _parse_toml(text: str) -> dict:
     except ImportError as exc:
         raise ImportError(
             "TOML support on Python < 3.11 requires the 'tomli' package.\n"
-            "Install it with:  pip install tomli"
+            "Install it with:  pip install 'mpl-help[toml]'"
         ) from exc
 
 
@@ -137,77 +67,44 @@ _PARSERS = {
 
 
 # ---------------------------------------------------------------------------
-# Colour resolver
+# dict → HelpManager
 # ---------------------------------------------------------------------------
-
-def resolve_colour(value: Optional[str]) -> Optional[str]:
-    """Return a hex colour string from a palette name or pass hex through."""
-    if value is None:
-        return None
-    lower = value.strip().lower()
-    return NAMED_COLOURS.get(lower, value)   # unknown names pass through as-is
-
-
-# ---------------------------------------------------------------------------
-# dict → data objects
-# ---------------------------------------------------------------------------
-
-def _import_backend(backend: Backend):
-    """Import and return (HelpManager, HelpSection, KeyBinding) for backend."""
-    if backend == "figure":
-        from mpl_help._figure import HelpManager, HelpSection, KeyBinding
-    elif backend == "html":
-        raise ValueError(
-            "The 'html' backend is not included in mpl-help. "
-            "Use backend='figure' (the default)."
-        )
-    elif backend == "tkinter":
-        raise ValueError(
-            "The 'tkinter' backend is not included in mpl-help. "
-            "Use backend='figure' (the default)."
-        )
-    else:
-        raise ValueError(
-            f"Unknown backend {backend!r}. "
-            "Choose 'figure', 'html', or 'tkinter'."
-        )
-    return HelpManager, HelpSection, KeyBinding
-
 
 def manager_from_dict(
     fig,
     config: Dict[str, Any],
-    backend: Backend = "figure",
+    theme: str = "dark",
+    palette: Optional[Dict[str, Tuple[str, str]]] = None,
 ):
     """
-    Build a :class:`HelpManager` from a plain Python dict.
-
-    This is the core builder; the other load helpers all call it after
-    parsing their respective formats.
+    Build a :class:`~mpl_help.HelpManager` from a plain Python dict.
 
     Parameters
     ----------
     fig :
         The matplotlib Figure to attach to.
     config :
-        Parsed configuration dictionary (see module docstring for schema).
-    backend :
-        Which rendering backend to use: ``"figure"`` (default),
-        ``"html"``, or ``"tkinter"``.
-
-    Returns
-    -------
-    HelpManager
-        Fully configured manager, *not yet attached*.  Call ``.attach()``
-        to start listening for the trigger key.
+        Parsed configuration dictionary.
+    theme :
+        ``"dark"`` (default) or ``"light"``.
+    palette :
+        Optional palette overrides — ``{name: (light_hex, dark_hex)}``.
+        See :data:`~mpl_help.DEFAULT_PALETTE` for valid key names.
     """
-    HelpManager, HelpSection, KeyBinding = _import_backend(backend)
+    from mpl_help._figure import HelpManager, HelpSection, KeyBinding
 
     title       = config.get("title", "Keyboard Shortcuts")
     trigger_key = config.get("trigger_key", "h")
-    footer      = config.get("footer", None)
+    footer      = config.get("footer") or None
 
-    mgr = HelpManager(fig, title=title, trigger_key=trigger_key, footer=footer)
+    mgr = HelpManager(
+        fig,
+        title=title,
+        trigger_key=trigger_key,
+        footer=footer,
+        theme=theme,
+        palette=palette,
+    )
 
     for sec_raw in config.get("sections", []):
         bindings = [
@@ -217,21 +114,15 @@ def manager_from_dict(
             )
             for b in sec_raw.get("bindings", [])
         ]
-        accent = resolve_colour(sec_raw.get("accent"))
+        # Store accent as-is (name or hex); resolution happens at render time.
+        accent = sec_raw.get("accent") or None
 
-        # Build kwargs — only pass accent if the dataclass accepts it
-        # (figure backend does; html/tkinter don't use it yet)
-        import inspect
-        sig = inspect.signature(HelpSection.__init__)
-        kw: Dict[str, Any] = dict(
+        mgr.add_section(HelpSection(
             title    = sec_raw.get("title", ""),
             bindings = bindings,
             note     = sec_raw.get("note") or None,
-        )
-        if "accent" in sig.parameters:
-            kw["accent"] = accent
-
-        mgr.add_section(HelpSection(**kw))
+            accent   = accent,
+        ))
 
     return mgr
 
@@ -244,10 +135,11 @@ def loads_manager(
     fig,
     text: str,
     fmt: str,
-    backend: Backend = "figure",
+    theme: str = "dark",
+    palette: Optional[Dict[str, Tuple[str, str]]] = None,
 ):
     """
-    Build a HelpManager by parsing *text* as the given format.
+    Build a :class:`~mpl_help.HelpManager` by parsing *text*.
 
     Parameters
     ----------
@@ -257,8 +149,10 @@ def loads_manager(
         Raw config text (YAML, TOML, or JSON string).
     fmt :
         ``"yaml"`` / ``"yml"``, ``"toml"``, or ``"json"``.
-    backend :
-        Rendering backend (``"figure"`` / ``"html"`` / ``"tkinter"``).
+    theme :
+        ``"dark"`` (default) or ``"light"``.
+    palette :
+        Optional palette overrides.
     """
     fmt = fmt.lower().lstrip(".")
     parser = _PARSERS.get(fmt)
@@ -267,18 +161,18 @@ def loads_manager(
             f"Unsupported format {fmt!r}. "
             f"Choose from: {', '.join(_PARSERS)}"
         )
-    config = parser(text)
-    return manager_from_dict(fig, config, backend=backend)
+    return manager_from_dict(fig, parser(text), theme=theme, palette=palette)
 
 
 def load_manager(
     fig,
     path: Union[str, Path],
-    backend: Backend = "figure",
+    theme: str = "dark",
+    palette: Optional[Dict[str, Tuple[str, str]]] = None,
     encoding: str = "utf-8",
 ):
     """
-    Build a HelpManager by reading a config file from disk.
+    Build a :class:`~mpl_help.HelpManager` from a config file.
 
     The format is auto-detected from the file extension
     (``.yaml``/``.yml``, ``.toml``, ``.json``).
@@ -289,12 +183,14 @@ def load_manager(
         The matplotlib Figure to attach to.
     path :
         Path to the config file.
-    backend :
-        Rendering backend (``"figure"`` / ``"html"`` / ``"tkinter"``).
+    theme :
+        ``"dark"`` (default) or ``"light"``.
+    palette :
+        Optional palette overrides.
     encoding :
         File encoding (default ``"utf-8"``).
     """
-    path = Path(path)
+    path   = Path(path)
     suffix = path.suffix.lstrip(".").lower()
     if suffix not in _PARSERS:
         raise ValueError(
@@ -302,4 +198,4 @@ def load_manager(
             f"Supported: {', '.join(f'.{k}' for k in _PARSERS)}"
         )
     text = path.read_text(encoding=encoding)
-    return loads_manager(fig, text, fmt=suffix, backend=backend)
+    return loads_manager(fig, text, fmt=suffix, theme=theme, palette=palette)

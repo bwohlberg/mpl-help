@@ -13,7 +13,6 @@ Run with:
 Default (no argument) uses the file route with example_help.yaml.
 """
 
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -52,10 +51,10 @@ def make_figure():
 
 # ── route 1: load from file ────────────────────────────────────────────────────
 
-def demo_file(fig):
-    print("Loading from example_help.yaml …")
-    mgr = load_manager(fig, "example_help.yaml", backend="figure")
-    fig.suptitle("Config demo — file route  (press h)",
+def demo_file(fig, theme="dark"):
+    print(f"Loading from example_help.yaml  [theme={theme}] …")
+    mgr = load_manager(fig, "example_help.yaml", theme=theme)
+    fig.suptitle(f"Config demo — file route  [theme={theme}]  (press h)",
                  color="#e6edf3", fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
@@ -95,10 +94,10 @@ sections:
         desc: Save figure
 """
 
-def demo_string(fig):
-    print("Parsing inline YAML string …")
-    mgr = loads_manager(fig, INLINE_YAML, fmt="yaml", backend="figure")
-    fig.suptitle("Config demo — string route  (press h)",
+def demo_string(fig, theme="dark"):
+    print(f"Parsing inline YAML string  [theme={theme}] …")
+    mgr = loads_manager(fig, INLINE_YAML, fmt="yaml", theme=theme)
+    fig.suptitle(f"Config demo — string route  [theme={theme}]  (press h)",
                  color="#e6edf3", fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
@@ -133,10 +132,10 @@ CONFIG_DICT = {
     ],
 }
 
-def demo_dict(fig):
-    print("Building from Python dict …")
-    mgr = manager_from_dict(fig, CONFIG_DICT, backend="figure")
-    fig.suptitle("Config demo — dict route  (press h)",
+def demo_dict(fig, theme="dark"):
+    print(f"Building from Python dict  [theme={theme}] …")
+    mgr = manager_from_dict(fig, CONFIG_DICT, theme=theme)
+    fig.suptitle(f"Config demo — dict route  [theme={theme}]  (press h)",
                  color="#e6edf3", fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
@@ -147,11 +146,26 @@ def demo_dict(fig):
 ROUTES = {"file": demo_file, "string": demo_string, "dict": demo_dict}
 
 if __name__ == "__main__":
-    route = sys.argv[1] if len(sys.argv) > 1 else "file"
-    if route not in ROUTES:
-        print(f"Usage: python demo_config.py [{' | '.join(ROUTES)}]")
-        sys.exit(1)
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="mpl-help demo — exercise the three config-loading routes."
+    )
+    parser.add_argument(
+        "route",
+        nargs="?",
+        default="file",
+        choices=ROUTES,
+        help="Config loading route to demonstrate (default: file)",
+    )
+    parser.add_argument(
+        "--theme",
+        default="dark",
+        choices=["dark", "light"],
+        help="Colour theme for the help window (default: dark)",
+    )
+    args = parser.parse_args()
 
     fig = make_figure()
-    mgr = ROUTES[route](fig)  # noqa: F841 — must stay in scope for callbacks to fire
+    mgr = ROUTES[args.route](fig, theme=args.theme)  # noqa: F841
     plt.show()
