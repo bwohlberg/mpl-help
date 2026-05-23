@@ -22,26 +22,40 @@ from mpl_help import load_manager, loads_manager, manager_from_dict
 
 # ── sample figure ─────────────────────────────────────────────────────────────
 
-def make_figure():
+# Colours used by the main figure, keyed by theme.
+_FIG_COLOURS = {
+    "dark":  dict(fig_bg="#0d1117", ax_bg="#161b22", spine="#30363d",
+                  tick="#8b949e",  title="#c9d1d9"),
+    "light": dict(fig_bg="#ffffff", ax_bg="#f6f8fa", spine="#d0d7de",
+                  tick="#656d76",  title="#1f2328"),
+}
+
+# Plot line/point colours chosen to work on both backgrounds.
+_PLOT_COLOURS = ["#0969da", "#8250df", "#1a7f37", "#cf222e"]
+
+
+def make_figure(theme="dark"):
+    fc  = _FIG_COLOURS[theme]
     rng = np.random.default_rng(0)
     t   = np.linspace(0, 4 * np.pi, 500)
 
-    fig = plt.figure(figsize=(11, 6), facecolor="#0d1117")
+    fig = plt.figure(figsize=(11, 6), facecolor=fc["fig_bg"])
     gs  = gridspec.GridSpec(2, 2, figure=fig, hspace=0.42, wspace=0.35,
                             left=0.08, right=0.97, top=0.88, bottom=0.10)
     axes = [fig.add_subplot(gs[r, c]) for r in range(2) for c in range(2)]
 
     plots = [
-        ("Sine",         t,              np.sin(t),                   "#7aa2f7"),
-        ("Damped cos",   t,              np.cos(t)*np.exp(-t/8),      "#bc8cff"),
-        ("Random walk",  np.arange(300), rng.standard_normal(300).cumsum(), "#3fb950"),
-        ("Scatter",      rng.standard_normal(200), rng.standard_normal(200), "#f85149"),
+        ("Sine",        t,               np.sin(t),                         _PLOT_COLOURS[0]),
+        ("Damped cos",  t,               np.cos(t) * np.exp(-t / 8),        _PLOT_COLOURS[1]),
+        ("Random walk", np.arange(300),  rng.standard_normal(300).cumsum(), _PLOT_COLOURS[2]),
+        ("Scatter",     rng.standard_normal(200), rng.standard_normal(200), _PLOT_COLOURS[3]),
     ]
     for ax, (title, x, y, color) in zip(axes, plots):
-        ax.set_facecolor("#161b22")
-        for sp in ax.spines.values(): sp.set_edgecolor("#30363d")
-        ax.tick_params(colors="#8b949e", labelsize=8)
-        ax.set_title(title, color="#c9d1d9", fontsize=9, pad=6)
+        ax.set_facecolor(fc["ax_bg"])
+        for sp in ax.spines.values():
+            sp.set_edgecolor(fc["spine"])
+        ax.tick_params(colors=fc["tick"], labelsize=8)
+        ax.set_title(title, color=fc["title"], fontsize=9, pad=6)
         if title == "Scatter":
             ax.scatter(x, y, c=color, s=14, alpha=0.7, linewidths=0)
         else:
@@ -55,7 +69,7 @@ def demo_file(fig, theme="dark"):
     print(f"Loading from example_help.yaml  [theme={theme}] …")
     mgr = load_manager(fig, "example_help.yaml", theme=theme)
     fig.suptitle(f"Config demo — file route  [theme={theme}]  (press h)",
-                 color="#e6edf3", fontsize=12, fontweight="bold", y=0.96)
+                 color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
 
@@ -98,7 +112,7 @@ def demo_string(fig, theme="dark"):
     print(f"Parsing inline YAML string  [theme={theme}] …")
     mgr = loads_manager(fig, INLINE_YAML, fmt="yaml", theme=theme)
     fig.suptitle(f"Config demo — string route  [theme={theme}]  (press h)",
-                 color="#e6edf3", fontsize=12, fontweight="bold", y=0.96)
+                 color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
 
@@ -136,7 +150,7 @@ def demo_dict(fig, theme="dark"):
     print(f"Building from Python dict  [theme={theme}] …")
     mgr = manager_from_dict(fig, CONFIG_DICT, theme=theme)
     fig.suptitle(f"Config demo — dict route  [theme={theme}]  (press h)",
-                 color="#e6edf3", fontsize=12, fontweight="bold", y=0.96)
+                 color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
 
@@ -166,6 +180,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    fig = make_figure()
+    fig = make_figure(theme=args.theme)
     mgr = ROUTES[args.route](fig, theme=args.theme)  # noqa: F841
     plt.show()
