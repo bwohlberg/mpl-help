@@ -246,6 +246,14 @@ class TestHelpManager:
         overrides = {"blue": ("#111", "#222")}
         assert HelpManager(fig, palette=overrides)._palette is overrides
 
+    def test_key_column_stored(self, fig):
+        mgr = HelpManager(fig, key_column=0.45)
+        assert mgr._key_column == 0.45
+
+    def test_key_column_default(self, fig):
+        from mpl_help._figure import _DEFAULT_KEY_COL
+        assert HelpManager(fig)._key_column == _DEFAULT_KEY_COL
+
     def test_invalid_theme_raises_on_show(self, fig):
         mgr = HelpManager(fig, theme="solarized")
         mgr.add_section(HelpSection("Nav", [KeyBinding("h", "Help")]))
@@ -446,7 +454,21 @@ class TestConfigLoaders:
         with pytest.raises(ValueError, match=".ini"):
             load_manager(fig, cfg)
 
-    def test_desc_alias(self, fig):
+    def test_key_column_from_config(self, fig):
+        cfg = dict(MINIMAL_DICT, key_column=0.45)
+        mgr = manager_from_dict(fig, cfg)
+        assert mgr._key_column == pytest.approx(0.45)
+
+    def test_key_column_programmatic_overrides_config(self, fig):
+        cfg = dict(MINIMAL_DICT, key_column=0.45)
+        mgr = manager_from_dict(fig, cfg, key_column=0.35)
+        assert mgr._key_column == pytest.approx(0.35)
+
+    def test_key_column_default_when_absent(self, fig):
+        from mpl_help._figure import _DEFAULT_KEY_COL
+        mgr = manager_from_dict(fig, MINIMAL_DICT)
+        assert mgr._key_column == pytest.approx(_DEFAULT_KEY_COL)
+
         cfg = {
             "title": "T",
             "sections": [

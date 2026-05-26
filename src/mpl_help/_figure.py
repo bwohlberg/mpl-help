@@ -29,6 +29,8 @@ _BINDING_ROW  = 1.0    # rows per key-binding line
 _NOTE_ROW     = 0.85   # rows for an optional note
 _SECTION_GAP  = 0.45   # gap between sections
 _FIG_WIDTH_IN = 7.2    # fixed figure width in inches
+_DEFAULT_KEY_COL = 0.24  # default right edge of key badge (fraction of axes width)
+_KEY_COL_GAP     = 0.03  # fixed gap between key badge and description text
 
 # ---------------------------------------------------------------------------
 # Palette  {name: (light_hex, dark_hex)}
@@ -195,6 +197,7 @@ def _build_help_figure(
     footer: str,
     theme: str = "dark",
     palette_overrides: Optional[Dict[str, Tuple[str, str]]] = None,
+    key_column: float = _DEFAULT_KEY_COL,
 ) -> mpl.figure.Figure:
     """Create and return the fully rendered help figure."""
 
@@ -301,7 +304,7 @@ def _build_help_figure(
                 transform=ax.transData, zorder=2,
             ))
             ax.text(
-                0.24, row_mid, kb.key,
+                key_column, row_mid, kb.key,
                 fontsize=8, fontweight="bold", fontfamily="monospace",
                 color=C["key_fg"], va="center", ha="right",
                 bbox=dict(
@@ -313,7 +316,7 @@ def _build_help_figure(
                 transform=ax.transData, zorder=3,
             )
             ax.text(
-                0.27, row_mid, kb.description,
+                key_column + _KEY_COL_GAP, row_mid, kb.description,
                 fontsize=8.5, color=C["text"],
                 va="center", ha="left",
                 transform=ax.transData, zorder=3,
@@ -402,6 +405,7 @@ class HelpManager:
         footer: Optional[str] = None,
         theme: str = "dark",
         palette: Optional[Dict[str, Tuple[str, str]]] = None,
+        key_column: float = _DEFAULT_KEY_COL,
     ) -> None:
         self._fig         = fig
         self._title       = title
@@ -409,6 +413,7 @@ class HelpManager:
         self._footer      = footer or f"press  {trigger_key}  to reopen"
         self._theme       = theme
         self._palette     = palette
+        self._key_column  = key_column
         self._sections: List[HelpSection] = []
         self._cid         = None
         self._help_fig: Optional[mpl.figure.Figure] = None
@@ -464,6 +469,7 @@ class HelpManager:
         self._help_fig = _build_help_figure(
             self._sections, self._title, self._footer,
             theme=self._theme, palette_overrides=self._palette,
+            key_column=self._key_column,
         )
         for key in (self._trigger_key, "q", "escape"):
             self._help_fig.canvas.mpl_connect(

@@ -62,7 +62,7 @@ from mpl_help._figure import (
 )
 from mpl_help._config import load_manager, loads_manager, manager_from_dict
 
-__version__ = "0.1.0rc2"
+__version__ = "0.1.0rc3"
 __author__  = "Your Name"
 __email__   = "you@example.com"
 

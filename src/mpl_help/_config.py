@@ -75,6 +75,7 @@ def manager_from_dict(
     config: Dict[str, Any],
     theme: str = "dark",
     palette: Optional[Dict[str, Tuple[str, str]]] = None,
+    key_column: Optional[float] = None,
 ):
     """
     Build a :class:`~mpl_help.HelpManager` from a plain Python dict.
@@ -90,12 +91,22 @@ def manager_from_dict(
     palette :
         Optional palette overrides — ``{name: (light_hex, dark_hex)}``.
         See :data:`~mpl_help.DEFAULT_PALETTE` for valid key names.
+    key_column :
+        Right edge of the key badge column as a fraction of figure width
+        (e.g. ``0.24`` for short keyboard labels, ``0.45`` for longer
+        mouse-event descriptions).  Overrides any value in *config*.
+        If ``None``, the value from *config* is used, falling back to
+        the package default (``0.24``).
     """
-    from mpl_help._figure import HelpManager, HelpSection, KeyBinding
+    from mpl_help._figure import HelpManager, HelpSection, KeyBinding, _DEFAULT_KEY_COL
 
     title       = config.get("title", "Keyboard Shortcuts")
     trigger_key = config.get("trigger_key", "h")
     footer      = config.get("footer") or None
+
+    # key_column: programmatic argument takes priority, then config file, then default
+    if key_column is None:
+        key_column = float(config.get("key_column", _DEFAULT_KEY_COL))
 
     mgr = HelpManager(
         fig,
@@ -104,6 +115,7 @@ def manager_from_dict(
         footer=footer,
         theme=theme,
         palette=palette,
+        key_column=key_column,
     )
 
     for sec_raw in config.get("sections", []):
@@ -137,6 +149,7 @@ def loads_manager(
     fmt: str,
     theme: str = "dark",
     palette: Optional[Dict[str, Tuple[str, str]]] = None,
+    key_column: Optional[float] = None,
 ):
     """
     Build a :class:`~mpl_help.HelpManager` by parsing *text*.
@@ -153,6 +166,9 @@ def loads_manager(
         ``"dark"`` (default) or ``"light"``.
     palette :
         Optional palette overrides.
+    key_column :
+        Right edge of key badge column as a fraction of figure width.
+        Overrides any value in the config text.
     """
     fmt = fmt.lower().lstrip(".")
     parser = _PARSERS.get(fmt)
@@ -161,7 +177,8 @@ def loads_manager(
             f"Unsupported format {fmt!r}. "
             f"Choose from: {', '.join(_PARSERS)}"
         )
-    return manager_from_dict(fig, parser(text), theme=theme, palette=palette)
+    return manager_from_dict(fig, parser(text), theme=theme, palette=palette,
+                             key_column=key_column)
 
 
 def load_manager(
@@ -169,6 +186,7 @@ def load_manager(
     path: Union[str, Path],
     theme: str = "dark",
     palette: Optional[Dict[str, Tuple[str, str]]] = None,
+    key_column: Optional[float] = None,
     encoding: str = "utf-8",
 ):
     """
@@ -187,6 +205,9 @@ def load_manager(
         ``"dark"`` (default) or ``"light"``.
     palette :
         Optional palette overrides.
+    key_column :
+        Right edge of key badge column as a fraction of figure width.
+        Overrides any value in the config file.
     encoding :
         File encoding (default ``"utf-8"``).
     """
@@ -198,4 +219,5 @@ def load_manager(
             f"Supported: {', '.join(f'.{k}' for k in _PARSERS)}"
         )
     text = path.read_text(encoding=encoding)
-    return loads_manager(fig, text, fmt=suffix, theme=theme, palette=palette)
+    return loads_manager(fig, text, fmt=suffix, theme=theme, palette=palette,
+                         key_column=key_column)
