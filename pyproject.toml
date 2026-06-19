@@ -9,7 +9,7 @@ description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
 license         = { file = "LICENSE" }
 requires-python = ">=3.9"
-authors         = [{ name = "Your Name", email = "you@example.com" }]
+authors         = [{ name = "Brendt Wohlberg", email = "brendt@ieee.org" }]
 keywords        = ["matplotlib", "help", "keyboard shortcuts"]
 classifiers     = [
     "Development Status :: 3 - Alpha",
@@ -29,8 +29,8 @@ dev    = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'",
           "pytest>=7", "build", "twine"]
 
 [project.urls]
-Homepage      = "https://github.com/yourname/mpl-help"
-"Bug Tracker" = "https://github.com/yourname/mpl-help/issues"
+Homepage      = "https://github.com/bwohlberg/mpl-help"
+"Bug Tracker" = "https://github.com/bwohlberg/mpl-help/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
