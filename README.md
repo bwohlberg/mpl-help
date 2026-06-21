@@ -236,13 +236,11 @@ the config file.
 The [`examples/`](examples) directory includes:
 
 - [`demo.py`](examples/demo.py) — exercises all three config-loading routes
-  (file / string / dict) and both themes. Run from inside `examples/`, since
-  it loads `example_help.yaml` via a relative path:
+  (file / string / dict) and both themes. Can be run from any directory:
   ```bash
-  cd examples
-  python demo.py file --theme light
-  python demo.py string --theme dark
-  python demo.py dict --theme light
+  python examples/demo.py file --theme light
+  python examples/demo.py string --theme dark
+  python examples/demo.py dict --theme light
   ```
 - [`example_help.yaml`](examples/example_help.yaml) /
   [`example_help.toml`](examples/example_help.toml) — fully annotated config

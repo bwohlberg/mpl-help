@@ -1,23 +1,36 @@
 """
-demo_config.py
-==============
+demo.py
+=======
 Demonstrates all three config-loading routes:
 
     1.  load_manager()   — reads a file from disk (format auto-detected)
     2.  loads_manager()  — parses an in-process text string
     3.  manager_from_dict() — builds directly from a Python dict
 
-Run with:
-    python demo_config.py [file|string|dict]
+Can be run from any working directory — example_help.yaml is located
+relative to this script's own path, not the current directory.
 
-Default (no argument) uses the file route with example_help.yaml.
+Run with:
+    python demo.py [file|string|dict] [--theme dark|light]
+
+Default (no argument) uses the file route with the dark theme and example_help.yaml.
 """
+
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 from mpl_help import load_manager, loads_manager, manager_from_dict
+
+# Resolve example_help.yaml relative to this script's location, not the
+# current working directory, so the demo can be run from anywhere:
+#   python demo.py                     (from examples/)
+#   python examples/demo.py            (from the repo root)
+#   python /abs/path/to/demo.py        (from anywhere else)
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_EXAMPLE_YAML = _SCRIPT_DIR / "example_help.yaml"
 
 
 # ── sample figure ─────────────────────────────────────────────────────────────
@@ -66,8 +79,8 @@ def make_figure(theme="dark"):
 # ── route 1: load from file ────────────────────────────────────────────────────
 
 def demo_file(fig, theme="dark"):
-    print(f"Loading from example_help.yaml  [theme={theme}] …")
-    mgr = load_manager(fig, "example_help.yaml", theme=theme)
+    print(f"Loading from {_EXAMPLE_YAML.name}  [theme={theme}] …")
+    mgr = load_manager(fig, _EXAMPLE_YAML, theme=theme)
     fig.suptitle(f"Config demo — file route  [theme={theme}]  (press h)",
                  color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
     mgr.attach()
