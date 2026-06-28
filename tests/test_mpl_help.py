@@ -6,25 +6,35 @@ Unit tests for mpl-help.  Run with:  pytest
 
 import gc
 import sys
-import pytest
+
 import matplotlib
+import pytest
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from matplotlib.backend_bases import KeyEvent
 
 from mpl_help import (
-    HelpManager, HelpSection, KeyBinding,
-    load_manager, loads_manager, manager_from_dict,
-    DEFAULT_PALETTE, ACCENT_NAMES,
+    ACCENT_NAMES,
+    DEFAULT_PALETTE,
+    HelpManager,
+    HelpSection,
+    KeyBinding,
+    load_manager,
+    loads_manager,
+    manager_from_dict,
 )
 from mpl_help._figure import (
-    _build_help_figure, _section_height, _total_rows,
-    _make_colour_map, _resolve_accent,
+    _build_help_figure,
+    _make_colour_map,
+    _resolve_accent,
+    _section_height,
+    _total_rows,
 )
 
-
 # ── fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(autouse=True)
 def close_all_figures():
@@ -58,18 +68,22 @@ def simple_manager(fig, simple_section):
 
 # ── palette ───────────────────────────────────────────────────────────────────
 
+
 class TestPalette:
     def test_default_palette_has_both_themes(self):
         for name, pair in DEFAULT_PALETTE.items():
-            assert isinstance(pair, tuple) and len(pair) == 2, \
-                f"{name!r} should be a (light, dark) tuple"
-            assert pair[0].startswith("#") and pair[1].startswith("#"), \
-                f"{name!r} values should be hex strings"
+            assert (
+                isinstance(pair, tuple) and len(pair) == 2
+            ), f"{name!r} should be a (light, dark) tuple"
+            assert pair[0].startswith("#") and pair[1].startswith(
+                "#"
+            ), f"{name!r} values should be hex strings"
 
     def test_accent_names_are_subset_of_palette(self):
         for name in ACCENT_NAMES:
-            assert name in DEFAULT_PALETTE, \
-                f"accent name {name!r} not in DEFAULT_PALETTE"
+            assert (
+                name in DEFAULT_PALETTE
+            ), f"accent name {name!r} not in DEFAULT_PALETTE"
 
     def test_make_colour_map_dark(self):
         C = _make_colour_map("dark")
@@ -88,9 +102,9 @@ class TestPalette:
     def test_palette_overrides_applied(self):
         overrides = {"blue": ("#aaaaaa", "#bbbbbb")}
         C_light = _make_colour_map("light", overrides)
-        C_dark  = _make_colour_map("dark",  overrides)
+        C_dark = _make_colour_map("dark", overrides)
         assert C_light["blue"] == "#aaaaaa"
-        assert C_dark["blue"]  == "#bbbbbb"
+        assert C_dark["blue"] == "#bbbbbb"
 
     def test_unknown_override_keys_ignored(self):
         # Should not raise
@@ -111,19 +125,20 @@ class TestPalette:
         assert _resolve_accent("#abcdef", C) == "#abcdef"
 
     def test_dark_and_light_differ_structurally(self):
-        C_dark  = _make_colour_map("dark")
+        C_dark = _make_colour_map("dark")
         C_light = _make_colour_map("light")
-        assert C_dark["bg"]   != C_light["bg"]
+        assert C_dark["bg"] != C_light["bg"]
         assert C_dark["text"] != C_light["text"]
 
     def test_dark_and_light_accents_differ(self):
         # Accent colours should be different between themes (darker on light bg)
-        C_dark  = _make_colour_map("dark")
+        C_dark = _make_colour_map("dark")
         C_light = _make_colour_map("light")
         assert C_dark["blue"] != C_light["blue"]
 
 
 # ── data classes ──────────────────────────────────────────────────────────────
+
 
 class TestDataClasses:
     def test_keybinding_fields(self):
@@ -147,24 +162,29 @@ class TestDataClasses:
 
 # ── layout arithmetic ─────────────────────────────────────────────────────────
 
+
 class TestLayout:
     def test_section_height_no_note(self):
-        from mpl_help._figure import _SECTION_HDR, _BINDING_ROW
+        from mpl_help._figure import _BINDING_ROW, _SECTION_HDR
+
         s = HelpSection("Nav", [KeyBinding("h", "Help"), KeyBinding("q", "Quit")])
         assert _section_height(s) == pytest.approx(_SECTION_HDR + 2 * _BINDING_ROW)
 
     def test_section_height_with_note(self, simple_section):
-        from mpl_help._figure import _SECTION_HDR, _BINDING_ROW, _NOTE_ROW
+        from mpl_help._figure import _BINDING_ROW, _NOTE_ROW, _SECTION_HDR
+
         assert _section_height(simple_section) == pytest.approx(
             _SECTION_HDR + 2 * _BINDING_ROW + _NOTE_ROW
         )
 
     def test_total_rows_padding(self):
-        from mpl_help._figure import _PAD_TOP, _PAD_BOT
+        from mpl_help._figure import _PAD_BOT, _PAD_TOP
+
         assert _total_rows([]) == pytest.approx(_PAD_TOP + _PAD_BOT)
 
 
 # ── figure builder ────────────────────────────────────────────────────────────
+
 
 class TestBuildHelpFigure:
     def test_returns_figure(self, simple_section):
@@ -200,7 +220,9 @@ class TestBuildHelpFigure:
         custom_bg = ("#fafafa", "#010101")
         section = HelpSection("S", [KeyBinding("h", "Help")])
         fig = _build_help_figure(
-            [section], "T", "F",
+            [section],
+            "T",
+            "F",
             theme="dark",
             palette_overrides={"bg": custom_bg},
         )
@@ -213,23 +235,18 @@ class TestBuildHelpFigure:
         fig = _build_help_figure([section], "T", "F", theme="dark")
         expected = mpl.colors.to_rgba(DEFAULT_PALETTE["green"][1])
         colours = [p.get_facecolor() for p in fig.axes[0].patches]
-        assert any(
-            all(abs(a - b) < 1e-3 for a, b in zip(c, expected))
-            for c in colours
-        )
+        assert any(all(abs(a - b) < 1e-3 for a, b in zip(c, expected)) for c in colours)
 
     def test_hex_accent_passthrough(self):
         section = HelpSection("S", [KeyBinding("h", "Help")], accent="#ff0000")
         fig = _build_help_figure([section], "T", "F", theme="dark")
         expected = mpl.colors.to_rgba("#ff0000")
         colours = [p.get_facecolor() for p in fig.axes[0].patches]
-        assert any(
-            all(abs(a - b) < 1e-3 for a, b in zip(c, expected))
-            for c in colours
-        )
+        assert any(all(abs(a - b) < 1e-3 for a, b in zip(c, expected)) for c in colours)
 
 
 # ── HelpManager ───────────────────────────────────────────────────────────────
+
 
 class TestHelpManager:
     def test_add_section_chainable(self, fig):
@@ -252,6 +269,7 @@ class TestHelpManager:
 
     def test_key_column_default(self, fig):
         from mpl_help._figure import _DEFAULT_KEY_COL
+
         assert HelpManager(fig)._key_column == _DEFAULT_KEY_COL
 
     def test_invalid_theme_raises_on_show(self, fig):
@@ -390,8 +408,11 @@ class TestConfigLoaders:
         cfg = {
             "title": "T",
             "sections": [
-                {"title": "S", "accent": "blue",
-                 "bindings": [{"key": "h", "desc": "Help"}]},
+                {
+                    "title": "S",
+                    "accent": "blue",
+                    "bindings": [{"key": "h", "desc": "Help"}],
+                },
             ],
         }
         mgr = manager_from_dict(fig, cfg)
@@ -466,14 +487,14 @@ class TestConfigLoaders:
 
     def test_key_column_default_when_absent(self, fig):
         from mpl_help._figure import _DEFAULT_KEY_COL
+
         mgr = manager_from_dict(fig, MINIMAL_DICT)
         assert mgr._key_column == pytest.approx(_DEFAULT_KEY_COL)
 
         cfg = {
             "title": "T",
             "sections": [
-                {"title": "S",
-                 "bindings": [{"key": "h", "description": "Help"}]},
+                {"title": "S", "bindings": [{"key": "h", "description": "Help"}]},
             ],
         }
         mgr = manager_from_dict(fig, cfg)

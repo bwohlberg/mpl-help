@@ -18,9 +18,9 @@ Default (no argument) uses the file route with the dark theme and example_help.y
 
 from pathlib import Path
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
 
 from mpl_help import load_manager, loads_manager, manager_from_dict
 
@@ -37,10 +37,20 @@ _EXAMPLE_YAML = _SCRIPT_DIR / "example_help.yaml"
 
 # Colours used by the main figure, keyed by theme.
 _FIG_COLOURS = {
-    "dark":  dict(fig_bg="#0d1117", ax_bg="#161b22", spine="#30363d",
-                  tick="#8b949e",  title="#c9d1d9"),
-    "light": dict(fig_bg="#ffffff", ax_bg="#f6f8fa", spine="#d0d7de",
-                  tick="#656d76",  title="#1f2328"),
+    "dark": dict(
+        fig_bg="#0d1117",
+        ax_bg="#161b22",
+        spine="#30363d",
+        tick="#8b949e",
+        title="#c9d1d9",
+    ),
+    "light": dict(
+        fig_bg="#ffffff",
+        ax_bg="#f6f8fa",
+        spine="#d0d7de",
+        tick="#656d76",
+        title="#1f2328",
+    ),
 }
 
 # Plot line/point colours chosen to work on both backgrounds.
@@ -48,20 +58,39 @@ _PLOT_COLOURS = ["#0969da", "#8250df", "#1a7f37", "#cf222e"]
 
 
 def make_figure(theme="dark"):
-    fc  = _FIG_COLOURS[theme]
+    fc = _FIG_COLOURS[theme]
     rng = np.random.default_rng(0)
-    t   = np.linspace(0, 4 * np.pi, 500)
+    t = np.linspace(0, 4 * np.pi, 500)
 
     fig = plt.figure(figsize=(11, 6), facecolor=fc["fig_bg"])
-    gs  = gridspec.GridSpec(2, 2, figure=fig, hspace=0.42, wspace=0.35,
-                            left=0.08, right=0.97, top=0.88, bottom=0.10)
+    gs = gridspec.GridSpec(
+        2,
+        2,
+        figure=fig,
+        hspace=0.42,
+        wspace=0.35,
+        left=0.08,
+        right=0.97,
+        top=0.88,
+        bottom=0.10,
+    )
     axes = [fig.add_subplot(gs[r, c]) for r in range(2) for c in range(2)]
 
     plots = [
-        ("Sine",        t,               np.sin(t),                         _PLOT_COLOURS[0]),
-        ("Damped cos",  t,               np.cos(t) * np.exp(-t / 8),        _PLOT_COLOURS[1]),
-        ("Random walk", np.arange(300),  rng.standard_normal(300).cumsum(), _PLOT_COLOURS[2]),
-        ("Scatter",     rng.standard_normal(200), rng.standard_normal(200), _PLOT_COLOURS[3]),
+        ("Sine", t, np.sin(t), _PLOT_COLOURS[0]),
+        ("Damped cos", t, np.cos(t) * np.exp(-t / 8), _PLOT_COLOURS[1]),
+        (
+            "Random walk",
+            np.arange(300),
+            rng.standard_normal(300).cumsum(),
+            _PLOT_COLOURS[2],
+        ),
+        (
+            "Scatter",
+            rng.standard_normal(200),
+            rng.standard_normal(200),
+            _PLOT_COLOURS[3],
+        ),
     ]
     for ax, (title, x, y, color) in zip(axes, plots):
         ax.set_facecolor(fc["ax_bg"])
@@ -78,11 +107,17 @@ def make_figure(theme="dark"):
 
 # ── route 1: load from file ────────────────────────────────────────────────────
 
+
 def demo_file(fig, theme="dark"):
     print(f"Loading from {_EXAMPLE_YAML.name}  [theme={theme}] …")
     mgr = load_manager(fig, _EXAMPLE_YAML, theme=theme)
-    fig.suptitle(f"Config demo — file route  [theme={theme}]  (press h)",
-                 color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
+    fig.suptitle(
+        f"Config demo — file route  [theme={theme}]  (press h)",
+        color=_FIG_COLOURS[theme]["title"],
+        fontsize=12,
+        fontweight="bold",
+        y=0.96,
+    )
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
 
@@ -121,11 +156,17 @@ sections:
         desc: Save figure
 """
 
+
 def demo_string(fig, theme="dark"):
     print(f"Parsing inline YAML string  [theme={theme}] …")
     mgr = loads_manager(fig, INLINE_YAML, fmt="yaml", theme=theme)
-    fig.suptitle(f"Config demo — string route  [theme={theme}]  (press h)",
-                 color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
+    fig.suptitle(
+        f"Config demo — string route  [theme={theme}]  (press h)",
+        color=_FIG_COLOURS[theme]["title"],
+        fontsize=12,
+        fontweight="bold",
+        y=0.96,
+    )
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
 
@@ -133,37 +174,43 @@ def demo_string(fig, theme="dark"):
 # ── route 3: build from a Python dict ─────────────────────────────────────────
 
 CONFIG_DICT = {
-    "title":       "Dict-based Help",
+    "title": "Dict-based Help",
     "trigger_key": "h",
-    "footer":      "built from a Python dict",
+    "footer": "built from a Python dict",
     "sections": [
         {
-            "title":  "General",
+            "title": "General",
             "accent": "cyan",
             "bindings": [
-                {"key": "h",          "desc": "Open / close this help window"},
+                {"key": "h", "desc": "Open / close this help window"},
                 {"key": "q / Escape", "desc": "Close figure"},
             ],
         },
         {
-            "title":  "View Controls",
-            "accent": "#ffa657",   # hex colour works too
-            "note":   "Pan and Zoom are toggled modes.",
+            "title": "View Controls",
+            "accent": "#ffa657",  # hex colour works too
+            "note": "Pan and Zoom are toggled modes.",
             "bindings": [
-                {"key": "z",        "desc": "Zoom mode"},
-                {"key": "p",        "desc": "Pan mode"},
+                {"key": "z", "desc": "Zoom mode"},
+                {"key": "p", "desc": "Pan mode"},
                 {"key": "r / Home", "desc": "Reset view"},
-                {"key": "+ / -",    "desc": "Zoom in / out"},
+                {"key": "+ / -", "desc": "Zoom in / out"},
             ],
         },
     ],
 }
 
+
 def demo_dict(fig, theme="dark"):
     print(f"Building from Python dict  [theme={theme}] …")
     mgr = manager_from_dict(fig, CONFIG_DICT, theme=theme)
-    fig.suptitle(f"Config demo — dict route  [theme={theme}]  (press h)",
-                 color=_FIG_COLOURS[theme]["title"], fontsize=12, fontweight="bold", y=0.96)
+    fig.suptitle(
+        f"Config demo — dict route  [theme={theme}]  (press h)",
+        color=_FIG_COLOURS[theme]["title"],
+        fontsize=12,
+        fontweight="bold",
+        y=0.96,
+    )
     mgr.attach()
     return mgr  # must be held alive; mpl_connect uses weak refs for bound methods
 
