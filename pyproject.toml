@@ -42,6 +42,9 @@ where = ["src"]
 testpaths = ["tests"]
 addopts   = "-v"
 
+[tool.black]
+target-version = ["py312"]
+
 [tool.isort]
 profile = "black"
 
