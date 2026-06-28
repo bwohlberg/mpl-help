@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) 2026 by Brendt Wohlberg <brendt@ieee.org>
+# All rights reserved. BSD 3-clause License.
+# This file is part of the mpl-help package. Details of the copyright
+# and user license can be found in the 'LICENSE.txt' file distributed
+# with the package.
+
 """
 mpl-help
 ========
@@ -53,18 +60,13 @@ See :data:`DEFAULT_PALETTE` for all available keys.
 Valid accent colour names are listed in :data:`ACCENT_NAMES`.
 """
 
-from mpl_help._figure import (
-    HelpManager,
-    HelpSection,
-    KeyBinding,
-    DEFAULT_PALETTE,
-    ACCENT_NAMES,
-)
 from mpl_help._config import load_manager, loads_manager, manager_from_dict
+from mpl_help._figure import (ACCENT_NAMES, DEFAULT_PALETTE, HelpManager,
+                              HelpSection, KeyBinding)
 
 __version__ = "0.1.0rc3"
-__author__  = "Your Name"
-__email__   = "you@example.com"
+__author__ = "Brendt Wohlberg"
+__email__ = "brendt@ieee.org"
 
 __all__ = [
     # Core data classes

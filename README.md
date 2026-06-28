@@ -317,3 +317,10 @@ pytest
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## Acknowledgements
+
+Development of this package involved extensive use if Claude Sonnet 4.6
+(Anthropic).

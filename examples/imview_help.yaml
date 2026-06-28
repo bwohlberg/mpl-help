@@ -1,0 +1,26 @@
+# imview_help.yaml
+# =================
+# Help/controls configuration for the komplot imview function.
+
+title: "imview \u2014 Controls"
+trigger_key: h
+footer: "komplot  \u2022  press h to reopen"
+key_column: 0.45
+
+sections:
+
+  - title: General
+    bindings:
+      - key: q
+        desc: Close figure
+      - key: "PageUp / PageDown"
+        desc: Increase or decrease figure size
+
+  - title: imview
+    bindings:
+      - key: Mouse wheel
+        desc: Zoom in or out at current cursor location
+      - key: Mouse wheel (colorbar bottom half)
+        desc: Increase or decrease colormap vmin
+      - key: Mouse wheel (colorbar top half)
+        desc: Increase or decrease colormap vmax

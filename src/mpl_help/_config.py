@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) 2026 by Brendt Wohlberg <brendt@ieee.org>
+# All rights reserved. BSD 3-clause License.
+# This file is part of the mpl-help package. Details of the copyright
+# and user license can be found in the 'LICENSE.txt' file distributed
+# with the package.
+
 """
 mpl_help._config
 ================
@@ -24,10 +31,10 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from mpl_help._figure import ACCENT_NAMES
 
-
 # ---------------------------------------------------------------------------
 # Format parsers
 # ---------------------------------------------------------------------------
+
 
 def _parse_yaml(text: str) -> dict:
     try:
@@ -43,9 +50,11 @@ def _parse_yaml(text: str) -> dict:
 def _parse_toml(text: str) -> dict:
     if sys.version_info >= (3, 11):
         import tomllib
+
         return tomllib.loads(text)
     try:
         import tomli
+
         return tomli.loads(text)
     except ImportError as exc:
         raise ImportError(
@@ -60,7 +69,7 @@ def _parse_json(text: str) -> dict:
 
 _PARSERS = {
     "yaml": _parse_yaml,
-    "yml":  _parse_yaml,
+    "yml": _parse_yaml,
     "toml": _parse_toml,
     "json": _parse_json,
 }
@@ -69,6 +78,7 @@ _PARSERS = {
 # ---------------------------------------------------------------------------
 # dict → HelpManager
 # ---------------------------------------------------------------------------
+
 
 def manager_from_dict(
     fig,
@@ -98,11 +108,12 @@ def manager_from_dict(
         If ``None``, the value from *config* is used, falling back to
         the package default (``0.24``).
     """
-    from mpl_help._figure import HelpManager, HelpSection, KeyBinding, _DEFAULT_KEY_COL
+    from mpl_help._figure import (_DEFAULT_KEY_COL, HelpManager, HelpSection,
+                                  KeyBinding)
 
-    title       = config.get("title", "Keyboard Shortcuts")
+    title = config.get("title", "Keyboard Shortcuts")
     trigger_key = config.get("trigger_key", "h")
-    footer      = config.get("footer") or None
+    footer = config.get("footer") or None
 
     # key_column: programmatic argument takes priority, then config file, then default
     if key_column is None:
@@ -121,20 +132,22 @@ def manager_from_dict(
     for sec_raw in config.get("sections", []):
         bindings = [
             KeyBinding(
-                key         = str(b.get("key", "")),
-                description = str(b.get("desc", b.get("description", ""))),
+                key=str(b.get("key", "")),
+                description=str(b.get("desc", b.get("description", ""))),
             )
             for b in sec_raw.get("bindings", [])
         ]
         # Store accent as-is (name or hex); resolution happens at render time.
         accent = sec_raw.get("accent") or None
 
-        mgr.add_section(HelpSection(
-            title    = sec_raw.get("title", ""),
-            bindings = bindings,
-            note     = sec_raw.get("note") or None,
-            accent   = accent,
-        ))
+        mgr.add_section(
+            HelpSection(
+                title=sec_raw.get("title", ""),
+                bindings=bindings,
+                note=sec_raw.get("note") or None,
+                accent=accent,
+            )
+        )
 
     return mgr
 
@@ -142,6 +155,7 @@ def manager_from_dict(
 # ---------------------------------------------------------------------------
 # Public loaders
 # ---------------------------------------------------------------------------
+
 
 def loads_manager(
     fig,
@@ -174,11 +188,11 @@ def loads_manager(
     parser = _PARSERS.get(fmt)
     if parser is None:
         raise ValueError(
-            f"Unsupported format {fmt!r}. "
-            f"Choose from: {', '.join(_PARSERS)}"
+            f"Unsupported format {fmt!r}. " f"Choose from: {', '.join(_PARSERS)}"
         )
-    return manager_from_dict(fig, parser(text), theme=theme, palette=palette,
-                             key_column=key_column)
+    return manager_from_dict(
+        fig, parser(text), theme=theme, palette=palette, key_column=key_column
+    )
 
 
 def load_manager(
@@ -211,7 +225,7 @@ def load_manager(
     encoding :
         File encoding (default ``"utf-8"``).
     """
-    path   = Path(path)
+    path = Path(path)
     suffix = path.suffix.lstrip(".").lower()
     if suffix not in _PARSERS:
         raise ValueError(
@@ -219,5 +233,6 @@ def load_manager(
             f"Supported: {', '.join(f'.{k}' for k in _PARSERS)}"
         )
     text = path.read_text(encoding=encoding)
-    return loads_manager(fig, text, fmt=suffix, theme=theme, palette=palette,
-                         key_column=key_column)
+    return loads_manager(
+        fig, text, fmt=suffix, theme=theme, palette=palette, key_column=key_column
+    )

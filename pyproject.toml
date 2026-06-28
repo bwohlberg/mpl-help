@@ -7,7 +7,7 @@ name            = "mpl-help"
 version         = "0.1.0rc3"
 description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
-license         = { file = "LICENSE" }
+license         = { file = "LICENSE.txt" }
 requires-python = ">=3.9"
 authors         = [{ name = "Brendt Wohlberg", email = "brendt@ieee.org" }]
 keywords        = ["matplotlib", "help", "keyboard shortcuts"]
@@ -41,3 +41,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts   = "-v"
+
+[tool.isort]
+profile = "black"
+

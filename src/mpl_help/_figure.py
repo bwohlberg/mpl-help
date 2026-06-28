@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) 2026 by Brendt Wohlberg <brendt@ieee.org>
+# All rights reserved. BSD 3-clause License.
+# This file is part of the mpl-help package. Details of the copyright
+# and user license can be found in the 'LICENSE.txt' file distributed
+# with the package.
+
 """
 mpl_help._figure
 ================
@@ -17,20 +24,19 @@ import matplotlib as mpl
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-
 # ---------------------------------------------------------------------------
 # Row-height constants  (in row-units)
 # ---------------------------------------------------------------------------
-_ROW_H_IN     = 0.32   # inches per row unit
-_PAD_TOP      = 2.2    # rows reserved for header
-_PAD_BOT      = 0.9    # rows reserved for footer
-_SECTION_HDR  = 1.3    # rows per section title bar
-_BINDING_ROW  = 1.0    # rows per key-binding line
-_NOTE_ROW     = 0.85   # rows for an optional note
-_SECTION_GAP  = 0.45   # gap between sections
-_FIG_WIDTH_IN = 7.2    # fixed figure width in inches
+_ROW_H_IN = 0.32  # inches per row unit
+_PAD_TOP = 2.2  # rows reserved for header
+_PAD_BOT = 0.9  # rows reserved for footer
+_SECTION_HDR = 1.3  # rows per section title bar
+_BINDING_ROW = 1.0  # rows per key-binding line
+_NOTE_ROW = 0.85  # rows for an optional note
+_SECTION_GAP = 0.45  # gap between sections
+_FIG_WIDTH_IN = 7.2  # fixed figure width in inches
 _DEFAULT_KEY_COL = 0.24  # default right edge of key badge (fraction of axes width)
-_KEY_COL_GAP     = 0.03  # fixed gap between key badge and description text
+_KEY_COL_GAP = 0.03  # fixed gap between key badge and description text
 
 # ---------------------------------------------------------------------------
 # Palette  {name: (light_hex, dark_hex)}
@@ -45,34 +51,32 @@ _KEY_COL_GAP     = 0.03  # fixed gap between key badge and description text
 
 DEFAULT_PALETTE: Dict[str, Tuple[str, str]] = {
     # ── structural ──────────────────────────── light        dark
-    "bg":          ("#ffffff", "#0d1117"),
-    "surface":     ("#f6f8fa", "#161b22"),
-    "panel":       ("#eaeef2", "#21262d"),
-    "border":      ("#d0d7de", "#30363d"),
-    "text":        ("#1f2328", "#e6edf3"),
-    "muted":       ("#656d76", "#8b949e"),
-    "key_bg":      ("#eaeef2", "#1c2128"),
-    "key_fg":      ("#953800", "#ffa657"),
-    "note_fg":     ("#1a7f37", "#3fb950"),
-    "note_bg":     ("#dafbe1", "#0f2a0f"),
+    "bg": ("#ffffff", "#0d1117"),
+    "surface": ("#f6f8fa", "#161b22"),
+    "panel": ("#eaeef2", "#21262d"),
+    "border": ("#d0d7de", "#30363d"),
+    "text": ("#1f2328", "#e6edf3"),
+    "muted": ("#656d76", "#8b949e"),
+    "key_bg": ("#eaeef2", "#1c2128"),
+    "key_fg": ("#953800", "#ffa657"),
+    "note_fg": ("#1a7f37", "#3fb950"),
+    "note_bg": ("#dafbe1", "#0f2a0f"),
     "note_border": ("#82cfaa", "#2ea043"),
-    "alt_row":     ("#f0f2f5", "#1c2128"),
-    "top_bar":     ("#0969da", "#58a6ff"),
+    "alt_row": ("#f0f2f5", "#1c2128"),
+    "top_bar": ("#0969da", "#58a6ff"),
     # ── named accent colours ─────────────────── light        dark
-    "blue":        ("#0969da", "#58a6ff"),
-    "purple":      ("#8250df", "#bc8cff"),
-    "green":       ("#1a7f37", "#3fb950"),
-    "yellow":      ("#9a6700", "#d29922"),
-    "orange":      ("#bc4c00", "#ffa657"),
-    "red":         ("#cf222e", "#f85149"),
-    "cyan":        ("#1b7c83", "#39c5cf"),
+    "blue": ("#0969da", "#58a6ff"),
+    "purple": ("#8250df", "#bc8cff"),
+    "green": ("#1a7f37", "#3fb950"),
+    "yellow": ("#9a6700", "#d29922"),
+    "orange": ("#bc4c00", "#ffa657"),
+    "red": ("#cf222e", "#f85149"),
+    "cyan": ("#1b7c83", "#39c5cf"),
 }
 
 #: The set of valid named accent colours accepted by config files and
 #: :class:`HelpSection`.
-ACCENT_NAMES = frozenset(
-    "blue purple green yellow orange red cyan".split()
-)
+ACCENT_NAMES = frozenset("blue purple green yellow orange red cyan".split())
 
 _THEME_IDX: Dict[str, int] = {"light": 0, "dark": 1}
 
@@ -80,6 +84,7 @@ _THEME_IDX: Dict[str, int] = {"light": 0, "dark": 1}
 # ---------------------------------------------------------------------------
 # Palette helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_colour_map(
     theme: str,
@@ -98,9 +103,7 @@ def _make_colour_map(
         tuples.  Unknown keys are silently ignored.
     """
     if theme not in _THEME_IDX:
-        raise ValueError(
-            f"Unknown theme {theme!r}. Choose 'dark' or 'light'."
-        )
+        raise ValueError(f"Unknown theme {theme!r}. Choose 'dark' or 'light'.")
     idx = _THEME_IDX[theme]
     colours = {name: pair[idx] for name, pair in DEFAULT_PALETTE.items()}
     if overrides:
@@ -134,9 +137,11 @@ def _resolve_accent(
 # Public data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class KeyBinding:
     """A single key → description pair."""
+
     key: str
     description: str
 
@@ -160,6 +165,7 @@ class HelpSection:
         (``"purple"``).  Named colours resolve per the active theme;
         raw hex strings are used as-is in both themes.
     """
+
     title: str
     bindings: List[KeyBinding] = field(default_factory=list)
     note: Optional[str] = None
@@ -169,6 +175,7 @@ class HelpSection:
 # ---------------------------------------------------------------------------
 # Internal layout helpers
 # ---------------------------------------------------------------------------
+
 
 def _section_height(section: HelpSection) -> float:
     """Total row-units consumed by one section (excluding trailing gap)."""
@@ -191,6 +198,7 @@ def _total_rows(sections: List[HelpSection]) -> float:
 # Figure renderer
 # ---------------------------------------------------------------------------
 
+
 def _build_help_figure(
     sections: List[HelpSection],
     title: str,
@@ -204,7 +212,7 @@ def _build_help_figure(
     C = _make_colour_map(theme, palette_overrides)
 
     n_rows = _total_rows(sections)
-    fig_h  = max(n_rows * _ROW_H_IN, 3.0)
+    fig_h = max(n_rows * _ROW_H_IN, 3.0)
 
     old_toolbar = mpl.rcParams["toolbar"]
     mpl.rcParams["toolbar"] = "None"
@@ -223,120 +231,192 @@ def _build_help_figure(
     ax.set_facecolor(C["bg"])
 
     # ── top accent bar ────────────────────────────────────────────────
-    ax.add_patch(mpatches.FancyBboxPatch(
-        (0, n_rows - 0.18), 1, 0.18,
-        boxstyle="square,pad=0",
-        facecolor=C["top_bar"], edgecolor="none",
-        transform=ax.transData, clip_on=False, zorder=3,
-    ))
+    ax.add_patch(
+        mpatches.FancyBboxPatch(
+            (0, n_rows - 0.18),
+            1,
+            0.18,
+            boxstyle="square,pad=0",
+            facecolor=C["top_bar"],
+            edgecolor="none",
+            transform=ax.transData,
+            clip_on=False,
+            zorder=3,
+        )
+    )
 
     # ── header title ──────────────────────────────────────────────────
     ax.text(
-        0.04, n_rows - 0.75, title,
-        fontsize=13, fontweight="bold",
-        color=C["text"], va="center", ha="left",
+        0.04,
+        n_rows - 0.75,
+        title,
+        fontsize=13,
+        fontweight="bold",
+        color=C["text"],
+        va="center",
+        ha="left",
         transform=ax.transData,
     )
     ax.text(
-        0.97, n_rows - 0.75,
+        0.97,
+        n_rows - 0.75,
         "press  h / q / Esc  to close",
-        fontsize=7, color=C["muted"],
-        va="center", ha="right",
+        fontsize=7,
+        color=C["muted"],
+        va="center",
+        ha="right",
         transform=ax.transData,
     )
     ax.axhline(
         n_rows - _PAD_TOP + 0.22,
-        xmin=0.03, xmax=0.97,
-        color=C["border"], linewidth=0.7, zorder=2,
+        xmin=0.03,
+        xmax=0.97,
+        color=C["border"],
+        linewidth=0.7,
+        zorder=2,
     )
 
     # ── sections ──────────────────────────────────────────────────────
     y = n_rows - _PAD_TOP
 
     for section in sections:
-        sec_h      = _section_height(section)
+        sec_h = _section_height(section)
         sec_accent = _resolve_accent(section.accent, C)
 
         # Section background panel
-        ax.add_patch(mpatches.FancyBboxPatch(
-            (0.03, y - sec_h), 0.94, sec_h,
-            boxstyle="round,pad=0.0",
-            facecolor=C["surface"], edgecolor=C["border"],
-            linewidth=0.6, transform=ax.transData, zorder=1,
-        ))
+        ax.add_patch(
+            mpatches.FancyBboxPatch(
+                (0.03, y - sec_h),
+                0.94,
+                sec_h,
+                boxstyle="round,pad=0.0",
+                facecolor=C["surface"],
+                edgecolor=C["border"],
+                linewidth=0.6,
+                transform=ax.transData,
+                zorder=1,
+            )
+        )
 
         # Section title bar background
-        ax.add_patch(mpatches.FancyBboxPatch(
-            (0.03, y - _SECTION_HDR), 0.94, _SECTION_HDR,
-            boxstyle="square,pad=0",
-            facecolor=C["panel"], edgecolor="none",
-            transform=ax.transData, zorder=2,
-        ))
+        ax.add_patch(
+            mpatches.FancyBboxPatch(
+                (0.03, y - _SECTION_HDR),
+                0.94,
+                _SECTION_HDR,
+                boxstyle="square,pad=0",
+                facecolor=C["panel"],
+                edgecolor="none",
+                transform=ax.transData,
+                zorder=2,
+            )
+        )
 
         # Accent stripe on left edge
-        ax.add_patch(mpatches.FancyBboxPatch(
-            (0.03, y - _SECTION_HDR), 0.004, _SECTION_HDR,
-            boxstyle="square,pad=0",
-            facecolor=sec_accent, edgecolor="none",
-            transform=ax.transData, zorder=3,
-        ))
+        ax.add_patch(
+            mpatches.FancyBboxPatch(
+                (0.03, y - _SECTION_HDR),
+                0.004,
+                _SECTION_HDR,
+                boxstyle="square,pad=0",
+                facecolor=sec_accent,
+                edgecolor="none",
+                transform=ax.transData,
+                zorder=3,
+            )
+        )
 
         # Section title text
         ax.text(
-            0.055, y - _SECTION_HDR / 2,
+            0.055,
+            y - _SECTION_HDR / 2,
             "  ".join(section.title.upper()),
-            fontsize=7.5, fontweight="bold",
-            color=sec_accent, va="center", ha="left",
-            transform=ax.transData, zorder=4,
+            fontsize=7.5,
+            fontweight="bold",
+            color=sec_accent,
+            va="center",
+            ha="left",
+            transform=ax.transData,
+            zorder=4,
         )
 
         y -= _SECTION_HDR
 
         # Key-binding rows
         for i, kb in enumerate(section.bindings):
-            row_bg  = C["alt_row"] if i % 2 == 0 else C["surface"]
+            row_bg = C["alt_row"] if i % 2 == 0 else C["surface"]
             row_mid = y - _BINDING_ROW / 2
 
-            ax.add_patch(mpatches.FancyBboxPatch(
-                (0.03, y - _BINDING_ROW), 0.94, _BINDING_ROW,
-                boxstyle="square,pad=0",
-                facecolor=row_bg, edgecolor="none",
-                transform=ax.transData, zorder=2,
-            ))
+            ax.add_patch(
+                mpatches.FancyBboxPatch(
+                    (0.03, y - _BINDING_ROW),
+                    0.94,
+                    _BINDING_ROW,
+                    boxstyle="square,pad=0",
+                    facecolor=row_bg,
+                    edgecolor="none",
+                    transform=ax.transData,
+                    zorder=2,
+                )
+            )
             ax.text(
-                key_column, row_mid, kb.key,
-                fontsize=8, fontweight="bold", fontfamily="monospace",
-                color=C["key_fg"], va="center", ha="right",
+                key_column,
+                row_mid,
+                kb.key,
+                fontsize=8,
+                fontweight="bold",
+                fontfamily="monospace",
+                color=C["key_fg"],
+                va="center",
+                ha="right",
                 bbox=dict(
                     boxstyle="round,pad=0.28",
                     facecolor=C["key_bg"],
                     edgecolor=C["border"],
                     linewidth=0.6,
                 ),
-                transform=ax.transData, zorder=3,
+                transform=ax.transData,
+                zorder=3,
             )
             ax.text(
-                key_column + _KEY_COL_GAP, row_mid, kb.description,
-                fontsize=8.5, color=C["text"],
-                va="center", ha="left",
-                transform=ax.transData, zorder=3,
+                key_column + _KEY_COL_GAP,
+                row_mid,
+                kb.description,
+                fontsize=8.5,
+                color=C["text"],
+                va="center",
+                ha="left",
+                transform=ax.transData,
+                zorder=3,
             )
             y -= _BINDING_ROW
 
         # Optional note
         if section.note:
-            ax.add_patch(mpatches.FancyBboxPatch(
-                (0.05, y - _NOTE_ROW + 0.08), 0.90, _NOTE_ROW - 0.08,
-                boxstyle="round,pad=0.05",
-                facecolor=C["note_bg"], edgecolor=C["note_border"],
-                linewidth=0.5, transform=ax.transData, zorder=3,
-            ))
+            ax.add_patch(
+                mpatches.FancyBboxPatch(
+                    (0.05, y - _NOTE_ROW + 0.08),
+                    0.90,
+                    _NOTE_ROW - 0.08,
+                    boxstyle="round,pad=0.05",
+                    facecolor=C["note_bg"],
+                    edgecolor=C["note_border"],
+                    linewidth=0.5,
+                    transform=ax.transData,
+                    zorder=3,
+                )
+            )
             ax.text(
-                0.08, y - _NOTE_ROW / 2 + 0.04,
+                0.08,
+                y - _NOTE_ROW / 2 + 0.04,
                 f"ℹ  {section.note}",
-                fontsize=7.5, color=C["note_fg"],
-                va="center", ha="left",
-                wrap=True, transform=ax.transData, zorder=4,
+                fontsize=7.5,
+                color=C["note_fg"],
+                va="center",
+                ha="left",
+                wrap=True,
+                transform=ax.transData,
+                zorder=4,
             )
             y -= _NOTE_ROW
 
@@ -345,19 +425,29 @@ def _build_help_figure(
     # ── footer ────────────────────────────────────────────────────────
     ax.axhline(
         _PAD_BOT - 0.15,
-        xmin=0.03, xmax=0.97,
-        color=C["border"], linewidth=0.7,
+        xmin=0.03,
+        xmax=0.97,
+        color=C["border"],
+        linewidth=0.7,
     )
     ax.text(
-        0.04, _PAD_BOT / 2 - 0.1, footer,
-        fontsize=7, color=C["muted"],
-        va="center", ha="left",
+        0.04,
+        _PAD_BOT / 2 - 0.1,
+        footer,
+        fontsize=7,
+        color=C["muted"],
+        va="center",
+        ha="left",
         transform=ax.transData,
     )
     ax.text(
-        0.97, _PAD_BOT / 2 - 0.1, "mpl-help",
-        fontsize=7, color=C["muted"],
-        va="center", ha="right",
+        0.97,
+        _PAD_BOT / 2 - 0.1,
+        "mpl-help",
+        fontsize=7,
+        color=C["muted"],
+        va="center",
+        ha="right",
         transform=ax.transData,
     )
 
@@ -367,6 +457,7 @@ def _build_help_figure(
 # ---------------------------------------------------------------------------
 # HelpManager
 # ---------------------------------------------------------------------------
+
 
 class HelpManager:
     """
@@ -407,15 +498,15 @@ class HelpManager:
         palette: Optional[Dict[str, Tuple[str, str]]] = None,
         key_column: float = _DEFAULT_KEY_COL,
     ) -> None:
-        self._fig         = fig
-        self._title       = title
+        self._fig = fig
+        self._title = title
         self._trigger_key = trigger_key
-        self._footer      = footer or f"press  {trigger_key}  to reopen"
-        self._theme       = theme
-        self._palette     = palette
-        self._key_column  = key_column
+        self._footer = footer or f"press  {trigger_key}  to reopen"
+        self._theme = theme
+        self._palette = palette
+        self._key_column = key_column
         self._sections: List[HelpSection] = []
-        self._cid         = None
+        self._cid = None
         self._help_fig: Optional[mpl.figure.Figure] = None
 
     # ── public API ────────────────────────────────────────────────────
@@ -429,9 +520,7 @@ class HelpManager:
         """Start listening for keypresses on the main figure canvas."""
         if self._cid is not None:
             return self
-        self._cid = self._fig.canvas.mpl_connect(
-            "key_press_event", self._on_key_press
-        )
+        self._cid = self._fig.canvas.mpl_connect("key_press_event", self._on_key_press)
         return self
 
     def detach(self) -> "HelpManager":
@@ -456,10 +545,7 @@ class HelpManager:
                 self._open_help()
 
     def _help_is_open(self) -> bool:
-        return (
-            self._help_fig is not None
-            and plt.fignum_exists(self._help_fig.number)
-        )
+        return self._help_fig is not None and plt.fignum_exists(self._help_fig.number)
 
     def _open_help(self) -> None:
         if self._help_is_open():
@@ -467,8 +553,11 @@ class HelpManager:
             return
 
         self._help_fig = _build_help_figure(
-            self._sections, self._title, self._footer,
-            theme=self._theme, palette_overrides=self._palette,
+            self._sections,
+            self._title,
+            self._footer,
+            theme=self._theme,
+            palette_overrides=self._palette,
             key_column=self._key_column,
         )
         for key in (self._trigger_key, "q", "escape"):
