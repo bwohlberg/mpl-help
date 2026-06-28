@@ -108,8 +108,7 @@ def manager_from_dict(
         If ``None``, the value from *config* is used, falling back to
         the package default (``0.24``).
     """
-    from mpl_help._figure import (_DEFAULT_KEY_COL, HelpManager, HelpSection,
-                                  KeyBinding)
+    from mpl_help._figure import _DEFAULT_KEY_COL, HelpManager, HelpSection, KeyBinding
 
     title = config.get("title", "Keyboard Shortcuts")
     trigger_key = config.get("trigger_key", "h")

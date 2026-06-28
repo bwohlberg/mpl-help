@@ -61,8 +61,13 @@ Valid accent colour names are listed in :data:`ACCENT_NAMES`.
 """
 
 from mpl_help._config import load_manager, loads_manager, manager_from_dict
-from mpl_help._figure import (ACCENT_NAMES, DEFAULT_PALETTE, HelpManager,
-                              HelpSection, KeyBinding)
+from mpl_help._figure import (
+    ACCENT_NAMES,
+    DEFAULT_PALETTE,
+    HelpManager,
+    HelpSection,
+    KeyBinding,
+)
 
 __version__ = "0.1.0rc3"
 __author__ = "Brendt Wohlberg"
