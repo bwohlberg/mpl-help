@@ -18,7 +18,7 @@ See :data:`DEFAULT_PALETTE` for the built-in colour definitions and
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import matplotlib as mpl
 import matplotlib.patches as mpatches
@@ -224,7 +224,7 @@ def _build_help_figure(
     mpl.rcParams["toolbar"] = old_toolbar
     fig.clf()
 
-    ax = fig.add_axes([0, 0, 1, 1])
+    ax = fig.add_axes((0.0, 0.0, 1.0, 1.0))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, n_rows)
     ax.axis("off")
@@ -455,6 +455,28 @@ def _build_help_figure(
 
 
 # ---------------------------------------------------------------------------
+# Window utilities
+# ---------------------------------------------------------------------------
+
+
+def _raise_window(fig: mpl.figure.Figure) -> None:
+    """Raise the window of ``fig`` above other windows, if supported.
+
+    The window object and the method used to raise it are both
+    backend-specific, and are entirely absent for non-interactive
+    backends, so the request is silently ignored when the active backend
+    provides no mechanism for it.
+    """
+    manager = fig.canvas.manager
+    if manager is None:
+        return
+    window = getattr(manager, "window", None)
+    raise_ = getattr(window, "raise_", None)
+    if callable(raise_):
+        raise_()
+
+
+# ---------------------------------------------------------------------------
 # HelpManager
 # ---------------------------------------------------------------------------
 
@@ -547,12 +569,21 @@ class HelpManager:
     def _help_is_open(self) -> bool:
         return self._help_fig is not None and plt.fignum_exists(self._help_fig.number)
 
+    def _close_on_key(self, key: str) -> Callable[[Any], None]:
+        """Construct a key_press_event handler closing the help figure on ``key``."""
+
+        def handler(event: Any) -> None:
+            if event.key == key:
+                self._close_help()
+
+        return handler
+
     def _open_help(self) -> None:
-        if self._help_is_open():
-            self._help_fig.canvas.manager.window.raise_()
+        if self._help_fig is not None and self._help_is_open():
+            _raise_window(self._help_fig)
             return
 
-        self._help_fig = _build_help_figure(
+        help_fig = _build_help_figure(
             self._sections,
             self._title,
             self._footer,
@@ -560,17 +591,15 @@ class HelpManager:
             palette_overrides=self._palette,
             key_column=self._key_column,
         )
+        self._help_fig = help_fig
         for key in (self._trigger_key, "q", "escape"):
-            self._help_fig.canvas.mpl_connect(
-                "key_press_event",
-                lambda e, k=key: self._close_help() if e.key == k else None,
-            )
-        self._help_fig.canvas.manager.set_window_title(
-            f"{self._title}  —  press h / q / Esc to close"
-        )
-        self._help_fig.show()
+            help_fig.canvas.mpl_connect("key_press_event", self._close_on_key(key))
+        manager = help_fig.canvas.manager
+        if manager is not None:
+            manager.set_window_title(f"{self._title}  —  press h / q / Esc to close")
+        help_fig.show()
 
     def _close_help(self) -> None:
-        if self._help_is_open():
+        if self._help_fig is not None and self._help_is_open():
             plt.close(self._help_fig)
         self._help_fig = None
