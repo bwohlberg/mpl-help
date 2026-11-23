@@ -8,15 +8,15 @@
 #   help_mgr = load_manager(fig, "example_help.toml")
 
 title       = "My Application — Keyboard Shortcuts"
-trigger_key = "h"
-footer      = "My App v1.0  •  press h to reopen"
+trigger_key = "?"
+footer      = "My App v1.0  •  press ? to reopen"
 
 [[sections]]
 title  = "Help"
 accent = "blue"
 
   [[sections.bindings]]
-  key  = "h"
+  key  = "?"
   desc = "Open / close this help window"
 
 [[sections]]

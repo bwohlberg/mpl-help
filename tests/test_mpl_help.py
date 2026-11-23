@@ -176,6 +176,49 @@ class TestLayout:
             _SECTION_HDR + 2 * _BINDING_ROW + _NOTE_ROW
         )
 
+    def test_long_description_wraps_and_grows_row(self):
+        from mpl_help._figure import _BINDING_ROW, _SECTION_HDR, _description_lines
+
+        long_desc = (
+            "toggle the overlay, reset the current view to its initial limits, "
+            "and print a summary of the current selection to standard output"
+        )
+        assert len(_description_lines(long_desc, 0.24)) > 1
+        s = HelpSection("Nav", [KeyBinding("x", long_desc)])
+        assert _section_height(s) > _SECTION_HDR + _BINDING_ROW
+
+    def test_long_note_wraps_and_grows_section(self):
+        from mpl_help._figure import _note_lines
+
+        long_note = (
+            "This note is deliberately long indeed: it describes in detail what "
+            "each of the bindings above does, why it exists, and which of the "
+            "alternative key choices were considered first."
+        )
+        assert len(_note_lines(long_note)) > 1
+        short = HelpSection("Nav", [KeyBinding("x", "y")], note="A note.")
+        long = HelpSection("Nav", [KeyBinding("x", "y")], note=long_note)
+        assert _section_height(long) > _section_height(short)
+
+    def test_wrapped_text_stays_within_panel(self):
+        from mpl_help._figure import _PANEL_RIGHT, _build_help_figure
+
+        long_note = (
+            "This note is deliberately long indeed: it describes in detail what "
+            "each of the bindings above does, why it exists, and which of the "
+            "alternative key choices were considered first."
+        )
+        section = HelpSection("Nav", [KeyBinding("x", "y")], note=long_note)
+        fig = _build_help_figure([section], "T", "F")
+        fig.canvas.draw()
+        axes = fig.axes[0]
+        inverse = axes.transData.inverted()
+        renderer = fig.canvas.get_renderer()
+        for text in axes.texts:
+            bbox = text.get_window_extent(renderer)
+            right = inverse.transform([(bbox.x1, bbox.y1)])[0][0]
+            assert right <= _PANEL_RIGHT + 0.01, text.get_text()
+
     def test_total_rows_padding(self):
         from mpl_help._figure import _PAD_BOT, _PAD_TOP
 
@@ -271,11 +314,57 @@ class TestHelpManager:
 
         assert HelpManager(fig)._key_column == _DEFAULT_KEY_COL
 
-    def test_invalid_theme_raises_on_show(self, fig):
-        mgr = HelpManager(fig, theme="solarized")
-        mgr.add_section(HelpSection("Nav", [KeyBinding("h", "Help")]))
+    def test_invalid_theme_raises_on_init(self, fig):
         with pytest.raises(ValueError, match="solarized"):
-            mgr.show()
+            HelpManager(fig, theme="solarized")
+
+    def test_default_trigger_key_avoids_matplotlib_bindings(self, fig):
+        trigger = HelpManager(fig)._trigger_key
+        bound = {
+            key
+            for param, value in mpl.rcParams.items()
+            if param.startswith("keymap.")
+            for key in value
+        }
+        assert trigger not in bound
+
+    def test_invalid_key_column_raises_on_init(self, fig):
+        with pytest.raises(ValueError, match="key_column"):
+            HelpManager(fig, key_column=1.5)
+
+    def test_invalid_palette_colour_raises_on_init(self, fig):
+        with pytest.raises(ValueError, match="not-a-colour"):
+            HelpManager(fig, palette={"bg": ("not-a-colour", "#000000")})
+
+    def test_malformed_palette_entry_raises_on_init(self, fig):
+        with pytest.raises(ValueError, match="light_hex"):
+            HelpManager(fig, palette={"bg": "#000000"})
+
+    def test_invalid_accent_raises(self):
+        with pytest.raises(ValueError, match="nosuchcolour"):
+            HelpSection("Nav", [KeyBinding("?", "Help")], accent="nosuchcolour")
+
+    def test_managers_do_not_share_a_help_figure(self, simple_section):
+        f1, f2 = plt.figure(), plt.figure()
+        m1, m2 = HelpManager(f1), HelpManager(f2)
+        m1.add_section(simple_section)
+        m2.add_section(simple_section)
+        m1.show()
+        m2.show()
+        assert m1._help_fig is not m2._help_fig
+        m2._close_help()
+        assert m1._help_is_open()
+
+    def test_help_figure_ignores_matplotlib_keymap(self, simple_manager):
+        simple_manager.show()
+        help_fig = simple_manager._help_fig
+        axes = help_fig.axes[0]
+        help_fig.canvas.draw()
+        width, height = help_fig.canvas.get_width_height()
+        KeyEvent(
+            "key_press_event", help_fig.canvas, "l", x=width // 2, y=height // 2
+        )._process()
+        assert axes.get_yscale() == "linear"
 
     def test_attach_sets_cid(self, fig):
         mgr = HelpManager(fig)
@@ -309,13 +398,14 @@ class TestHelpManager:
     def test_keypress_opens_figure(self, simple_manager, fig):
         simple_manager.attach()
         fig.canvas.callbacks.process(
-            "key_press_event", KeyEvent("key_press_event", fig.canvas, "h")
+            "key_press_event",
+            KeyEvent("key_press_event", fig.canvas, simple_manager._trigger_key),
         )
         assert simple_manager._help_is_open()
 
     def test_second_keypress_closes_figure(self, simple_manager, fig):
         simple_manager.attach()
-        event = KeyEvent("key_press_event", fig.canvas, "h")
+        event = KeyEvent("key_press_event", fig.canvas, simple_manager._trigger_key)
         fig.canvas.callbacks.process("key_press_event", event)
         fig.canvas.callbacks.process("key_press_event", event)
         assert not simple_manager._help_is_open()
@@ -338,10 +428,11 @@ class TestHelpManager:
 
     def test_weak_ref_survives_while_in_scope(self, fig):
         mgr = HelpManager(fig)
-        mgr.add_section(HelpSection("Nav", [KeyBinding("h", "Help")]))
+        mgr.add_section(HelpSection("Nav", [KeyBinding("?", "Help")]))
         mgr.attach()
         fig.canvas.callbacks.process(
-            "key_press_event", KeyEvent("key_press_event", fig.canvas, "h")
+            "key_press_event",
+            KeyEvent("key_press_event", fig.canvas, mgr._trigger_key),
         )
         assert mgr._help_is_open()
 

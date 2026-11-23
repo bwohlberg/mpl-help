@@ -16,11 +16,11 @@
 title: "My Application — Keyboard Shortcuts"
 
 # Key that opens the help window (default: h).
-trigger_key: h
+trigger_key: "?"
 
 # Small note at the bottom of the window (optional).
-# If omitted, a default "press h to reopen" hint is used.
-footer: "My App v1.0  •  press h to reopen"
+# If omitted, a default "press ? to reopen" hint is used.
+footer: "My App v1.0  •  press ? to reopen"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTIONS

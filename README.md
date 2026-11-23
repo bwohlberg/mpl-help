@@ -53,7 +53,7 @@ help_mgr.add_section(HelpSection(
     title="Navigation",
     accent="blue",
     bindings=[
-        KeyBinding("h",          "Show this help window"),
+        KeyBinding("?",          "Show this help window"),
         KeyBinding("q / Escape", "Close figure"),
         KeyBinding("← → ↑ ↓",   "Pan the active axes"),
     ],
@@ -115,7 +115,7 @@ Top-level keys:
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `title` | `str` | `"Keyboard Shortcuts"` | Heading shown in the help window |
-| `trigger_key` | `str` | `"h"` | Key that opens / closes the help window |
+| `trigger_key` | `str` | `"?"` | Key that opens / closes the help window |
 | `footer` | `str` | auto | Small note at the bottom of the window |
 | `key_column` | `float` | `0.24` | Right edge of the key badge column, as a fraction of figure width |
 | `sections` | `list` | — | Ordered list of section blocks (required) |
@@ -265,7 +265,7 @@ The [`examples/`](examples) directory includes:
 |---|---|---|---|
 | `fig` | `Figure` | — | The matplotlib figure to monitor |
 | `title` | `str` | `"Keyboard Shortcuts"` | Heading in the help window |
-| `trigger_key` | `str` | `"h"` | Key that opens / closes the help window |
+| `trigger_key` | `str` | `"?"` | Key that opens / closes the help window |
 | `footer` | `str \| None` | auto | Note at the bottom of the window |
 | `theme` | `str` | `"dark"` | `"dark"` or `"light"` |
 | `palette` | `dict \| None` | `None` | Per-instance palette overrides |
