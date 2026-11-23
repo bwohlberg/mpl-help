@@ -219,6 +219,32 @@ class TestLayout:
             right = inverse.transform([(bbox.x1, bbox.y1)])[0][0]
             assert right <= _PANEL_RIGHT + 0.01, text.get_text()
 
+    def test_section_panel_matches_wrapped_content(self):
+        import matplotlib.colors as mcolors
+
+        from mpl_help._figure import DEFAULT_PALETTE, _build_help_figure
+
+        long_desc = (
+            "toggle the overlay, reset the view to its initial limits, and "
+            "print a summary of the current selection to standard output"
+        )
+        section = HelpSection(
+            "Nav", [KeyBinding("x", long_desc), KeyBinding("y", "brief")]
+        )
+        surface = mcolors.to_hex(DEFAULT_PALETTE["surface"][1])
+        for key_column in (0.24, 0.45):
+            fig = _build_help_figure(
+                [section], "T", "F", theme="dark", key_column=key_column
+            )
+            panel = next(
+                p
+                for p in fig.axes[0].patches
+                if mcolors.to_hex(p.get_facecolor()) == surface
+            )
+            assert panel.get_height() == pytest.approx(
+                _section_height(section, key_column)
+            )
+
     def test_total_rows_padding(self):
         from mpl_help._figure import _PAD_BOT, _PAD_TOP
 

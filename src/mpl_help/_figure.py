@@ -431,8 +431,10 @@ def _build_help_figure(
     # ── sections ──────────────────────────────────────────────────────
     y = n_rows - _PAD_TOP
 
-    for section in sections:
-        sec_h = _section_height(section)
+    for i, section in enumerate(sections):
+        if i:
+            y -= _SECTION_GAP
+        sec_h = _section_height(section, key_column)
         sec_accent = _resolve_accent(section.accent, C)
 
         # Section background panel
@@ -574,8 +576,6 @@ def _build_help_figure(
                 zorder=4,
             )
             y -= note_h
-
-        y -= _SECTION_GAP
 
     # ── footer ────────────────────────────────────────────────────────
     ax.axhline(
