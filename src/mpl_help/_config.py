@@ -28,8 +28,6 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from mpl_help._figure import ACCENT_NAMES
-
 # ---------------------------------------------------------------------------
 # Format parsers
 # ---------------------------------------------------------------------------
