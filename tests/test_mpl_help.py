@@ -5,7 +5,6 @@ Unit tests for mpl-help.  Run with:  pytest
 """
 
 import gc
-import sys
 
 import matplotlib
 import pytest
@@ -432,9 +431,6 @@ class TestConfigLoaders:
         assert mgr._title == "YAML Test"
         assert mgr._sections[0].accent == "green"  # stored as name
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 11), reason="tomllib stdlib requires Python 3.11+"
-    )
     def test_loads_manager_toml(self, fig):
         toml_text = (
             'title = "TOML Test"\n'

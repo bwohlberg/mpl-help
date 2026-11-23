@@ -8,7 +8,7 @@ version         = "0.1.0rc3"
 description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
 license         = { file = "LICENSE.txt" }
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors         = [{ name = "Brendt Wohlberg", email = "brendt@ieee.org" }]
 keywords        = ["matplotlib", "help", "keyboard shortcuts"]
 classifiers     = [
@@ -22,11 +22,10 @@ classifiers     = [
 dependencies = ["matplotlib>=3.5"]
 
 [project.optional-dependencies]
+# TOML needs no extra: tomllib is in the standard library from Python 3.11.
 yaml   = ["pyyaml>=6.0"]
-toml   = ["tomli>=2.0; python_version < '3.11'"]
-config = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'"]
-dev    = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'",
-          "pytest>=7", "build", "twine"]
+config = ["pyyaml>=6.0"]
+dev    = ["pyyaml>=6.0", "pytest>=7", "build", "twine"]
 
 [project.urls]
 Homepage      = "https://github.com/bwohlberg/mpl-help"

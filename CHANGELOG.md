@@ -7,6 +7,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Minimum supported Python raised to 3.11
+
+### Removed
+- `toml` extra and the `tomli` fallback it provided: TOML config files are
+  now always parsed with the standard library `tomllib` module
+
 ### Fixed
 - `AttributeError` when reopening the help window under a backend whose
   figure manager has no window object, such as Agg or a non-Qt GUI backend

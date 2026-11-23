@@ -13,8 +13,7 @@ Format-agnostic configuration loader for mpl-help.
 Supported formats
 -----------------
 YAML  (.yaml / .yml)   requires  PyYAML  (``pip install pyyaml``)
-TOML  (.toml)          stdlib ``tomllib`` (Python ≥ 3.11) or
-                       ``tomli``  (``pip install tomli``)
+TOML  (.toml)          stdlib ``tomllib`` — always available
 JSON  (.json)          stdlib ``json`` — always available
 
 The theme and palette are presentation concerns and are therefore
@@ -25,9 +24,9 @@ the loader functions or directly to :class:`~mpl_help.HelpManager`.
 from __future__ import annotations
 
 import json
-import sys
+import tomllib
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
 from mpl_help._figure import ACCENT_NAMES
 
@@ -48,19 +47,7 @@ def _parse_yaml(text: str) -> dict:
 
 
 def _parse_toml(text: str) -> dict:
-    if sys.version_info >= (3, 11):
-        import tomllib
-
-        return tomllib.loads(text)
-    try:
-        import tomli
-
-        return tomli.loads(text)
-    except ImportError as exc:
-        raise ImportError(
-            "TOML support on Python < 3.11 requires the 'tomli' package.\n"
-            "Install it with:  pip install 'mpl-help[toml]'"
-        ) from exc
+    return tomllib.loads(text)
 
 
 def _parse_json(text: str) -> dict:
@@ -82,10 +69,10 @@ _PARSERS = {
 
 def manager_from_dict(
     fig,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     theme: str = "dark",
-    palette: Optional[Dict[str, Tuple[str, str]]] = None,
-    key_column: Optional[float] = None,
+    palette: dict[str, tuple[str, str]] | None = None,
+    key_column: float | None = None,
 ):
     """
     Build a :class:`~mpl_help.HelpManager` from a plain Python dict.
@@ -161,8 +148,8 @@ def loads_manager(
     text: str,
     fmt: str,
     theme: str = "dark",
-    palette: Optional[Dict[str, Tuple[str, str]]] = None,
-    key_column: Optional[float] = None,
+    palette: dict[str, tuple[str, str]] | None = None,
+    key_column: float | None = None,
 ):
     """
     Build a :class:`~mpl_help.HelpManager` by parsing *text*.
@@ -196,10 +183,10 @@ def loads_manager(
 
 def load_manager(
     fig,
-    path: Union[str, Path],
+    path: str | Path,
     theme: str = "dark",
-    palette: Optional[Dict[str, Tuple[str, str]]] = None,
-    key_column: Optional[float] = None,
+    palette: dict[str, tuple[str, str]] | None = None,
+    key_column: float | None = None,
     encoding: str = "utf-8",
 ):
     """

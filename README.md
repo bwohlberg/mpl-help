@@ -17,12 +17,14 @@ controls.
 
 ## Installation
 
+Requires Python ≥ 3.11.
+
 ### Local (editable) install
 
 ```bash
 git clone https://github.com/bwohlberg/mpl-help
 cd mpl-help
-pip install -e ".[config]"   # includes PyYAML + tomli for config file support
+pip install -e ".[config]"   # includes PyYAML for config file support
 ```
 
 ### From PyPI (once published)
@@ -30,8 +32,7 @@ pip install -e ".[config]"   # includes PyYAML + tomli for config file support
 ```bash
 pip install mpl-help                  # matplotlib only, JSON config works out of the box
 pip install "mpl-help[yaml]"          # add YAML support
-pip install "mpl-help[toml]"          # add TOML support  (stdlib on Python ≥ 3.11)
-pip install "mpl-help[config]"        # add both
+pip install "mpl-help[config]"        # same, plus any future config extras
 ```
 
 ---
@@ -142,7 +143,7 @@ examples with a wider key column for mouse-event descriptions.
 | Format | Extra dependency |
 |---|---|
 | YAML (`.yaml` / `.yml`) | `pip install mpl-help[yaml]` |
-| TOML (`.toml`) | stdlib on Python ≥ 3.11; `pip install mpl-help[toml]` on older Pythons |
+| TOML (`.toml`) | none — stdlib `tomllib` |
 | JSON (`.json`) | none — always available |
 
 The same content can also be supplied directly as a Python dict — see

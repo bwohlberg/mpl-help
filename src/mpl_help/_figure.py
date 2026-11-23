@@ -17,8 +17,9 @@ See :data:`DEFAULT_PALETTE` for the built-in colour definitions and
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 import matplotlib as mpl
 import matplotlib.patches as mpatches
@@ -49,7 +50,7 @@ _KEY_COL_GAP = 0.03  # fixed gap between key badge and description text
 #
 # Users may override any entry via the ``palette`` argument to HelpManager.
 
-DEFAULT_PALETTE: Dict[str, Tuple[str, str]] = {
+DEFAULT_PALETTE: dict[str, tuple[str, str]] = {
     # ── structural ──────────────────────────── light        dark
     "bg": ("#ffffff", "#0d1117"),
     "surface": ("#f6f8fa", "#161b22"),
@@ -78,7 +79,7 @@ DEFAULT_PALETTE: Dict[str, Tuple[str, str]] = {
 #: :class:`HelpSection`.
 ACCENT_NAMES = frozenset("blue purple green yellow orange red cyan".split())
 
-_THEME_IDX: Dict[str, int] = {"light": 0, "dark": 1}
+_THEME_IDX: dict[str, int] = {"light": 0, "dark": 1}
 
 
 # ---------------------------------------------------------------------------
@@ -88,8 +89,8 @@ _THEME_IDX: Dict[str, int] = {"light": 0, "dark": 1}
 
 def _make_colour_map(
     theme: str,
-    overrides: Optional[Dict[str, Tuple[str, str]]] = None,
-) -> Dict[str, str]:
+    overrides: dict[str, tuple[str, str]] | None = None,
+) -> dict[str, str]:
     """
     Return a flat ``{name: hex}`` colour map for *theme*, applying any
     user-supplied *overrides* on top of :data:`DEFAULT_PALETTE`.
@@ -115,8 +116,8 @@ def _make_colour_map(
 
 
 def _resolve_accent(
-    name_or_hex: Optional[str],
-    colours: Dict[str, str],
+    name_or_hex: str | None,
+    colours: dict[str, str],
 ) -> str:
     """
     Resolve a section accent value to a hex string.
@@ -167,9 +168,9 @@ class HelpSection:
     """
 
     title: str
-    bindings: List[KeyBinding] = field(default_factory=list)
-    note: Optional[str] = None
-    accent: Optional[str] = None
+    bindings: list[KeyBinding] = field(default_factory=list)
+    note: str | None = None
+    accent: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +186,7 @@ def _section_height(section: HelpSection) -> float:
     return h
 
 
-def _total_rows(sections: List[HelpSection]) -> float:
+def _total_rows(sections: list[HelpSection]) -> float:
     rows = _PAD_TOP + _PAD_BOT
     for i, s in enumerate(sections):
         rows += _section_height(s)
@@ -200,11 +201,11 @@ def _total_rows(sections: List[HelpSection]) -> float:
 
 
 def _build_help_figure(
-    sections: List[HelpSection],
+    sections: list[HelpSection],
     title: str,
     footer: str,
     theme: str = "dark",
-    palette_overrides: Optional[Dict[str, Tuple[str, str]]] = None,
+    palette_overrides: dict[str, tuple[str, str]] | None = None,
     key_column: float = _DEFAULT_KEY_COL,
 ) -> mpl.figure.Figure:
     """Create and return the fully rendered help figure."""
@@ -515,9 +516,9 @@ class HelpManager:
         fig,
         title: str = "Keyboard Shortcuts",
         trigger_key: str = "h",
-        footer: Optional[str] = None,
+        footer: str | None = None,
         theme: str = "dark",
-        palette: Optional[Dict[str, Tuple[str, str]]] = None,
+        palette: dict[str, tuple[str, str]] | None = None,
         key_column: float = _DEFAULT_KEY_COL,
     ) -> None:
         self._fig = fig
@@ -527,9 +528,9 @@ class HelpManager:
         self._theme = theme
         self._palette = palette
         self._key_column = key_column
-        self._sections: List[HelpSection] = []
+        self._sections: list[HelpSection] = []
         self._cid = None
-        self._help_fig: Optional[mpl.figure.Figure] = None
+        self._help_fig: mpl.figure.Figure | None = None
 
     # ── public API ────────────────────────────────────────────────────
 
