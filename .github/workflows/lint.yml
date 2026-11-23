@@ -25,4 +25,6 @@ jobs:
       - name: Pylint code analysis
         run: |
           pip install pylint
-          pylint --disable=all --enable=missing-docstring,broad-exception-raised src/mpl_help
+          pylint --disable=all \
+            --enable=missing-docstring,broad-exception-raised,unused-import,unused-variable \
+            src/mpl_help

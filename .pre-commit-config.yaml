@@ -37,5 +37,6 @@ repos:
       language: python
       language_version: python3
       types: [python]
-      exclude: ^(examples|docs)
-      args: ['--score=n', '--disable=all', '--enable=missing-docstring,broad-exception-raised']
+      exclude: ^(examples|docs|tests)
+      args: ['--score=n', '--disable=all',
+             '--enable=missing-docstring,broad-exception-raised,unused-import,unused-variable']
