@@ -25,6 +25,7 @@ jobs:
         run: |
           pip install mypy
           pip install matplotlib
+          pip install types-PyYAML
       - name: Run mypy
         run: |
           mypy src/mpl_help

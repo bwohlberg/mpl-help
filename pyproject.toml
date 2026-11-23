@@ -1,13 +1,14 @@
 [build-system]
-requires      = ["setuptools>=68", "wheel"]
+requires      = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name            = "mpl-help"
-version         = "0.1.0rc3"
+dynamic         = ["version"]
 description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
-license         = { file = "LICENSE.txt" }
+license         = "BSD-3-Clause"
+license-files   = ["LICENSE.txt"]
 requires-python = ">=3.11"
 authors         = [{ name = "Brendt Wohlberg", email = "brendt@ieee.org" }]
 keywords        = ["matplotlib", "help", "keyboard shortcuts"]
@@ -15,7 +16,6 @@ classifiers     = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
@@ -30,6 +30,9 @@ dev    = ["pyyaml>=6.0", "pytest>=7", "build", "twine"]
 [project.urls]
 Homepage      = "https://github.com/bwohlberg/mpl-help"
 "Bug Tracker" = "https://github.com/bwohlberg/mpl-help/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "mpl_help.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

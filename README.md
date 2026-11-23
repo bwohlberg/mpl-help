@@ -321,6 +321,12 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
+## License
+
+BSD 3-Clause — see [LICENSE.txt](LICENSE.txt).
+
+---
+
 ## Acknowledgements
 
 Development of this package involved extensive use if Claude Sonnet 4.6

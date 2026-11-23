@@ -215,14 +215,14 @@ def _build_help_figure(
     n_rows = _total_rows(sections)
     fig_h = max(n_rows * _ROW_H_IN, 3.0)
 
-    old_toolbar = mpl.rcParams["toolbar"]
-    mpl.rcParams["toolbar"] = "None"
-    fig = plt.figure(
-        figsize=(_FIG_WIDTH_IN, fig_h),
-        facecolor=C["bg"],
-        num="__mpl_help__",
-    )
-    mpl.rcParams["toolbar"] = old_toolbar
+    # rc_context, rather than assignment, so that a failure during figure
+    # creation cannot leave the toolbar suppressed for the whole session.
+    with mpl.rc_context({"toolbar": "None"}):
+        fig = plt.figure(
+            figsize=(_FIG_WIDTH_IN, fig_h),
+            facecolor=C["bg"],
+            num="__mpl_help__",
+        )
     fig.clf()
 
     ax = fig.add_axes((0.0, 0.0, 1.0, 1.0))

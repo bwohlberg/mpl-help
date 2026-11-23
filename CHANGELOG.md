@@ -15,6 +15,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   now always parsed with the standard library `tomllib` module
 
 ### Fixed
+- Package metadata declared the MIT license, while the package is in fact
+  BSD 3-Clause licensed
+- Suppression of the help window toolbar no longer leaks into the rest of
+  the session when figure creation fails
 - `AttributeError` when reopening the help window under a backend whose
   figure manager has no window object, such as Agg or a non-Qt GUI backend
 
