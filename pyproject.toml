@@ -40,7 +40,11 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts   = "-v"
+filterwarnings = [
+    # The tests select the non-interactive Agg backend, under which the
+    # Figure.show call opening a help window cannot display anything.
+    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+]
 
 [tool.black]
 target-version = ["py312"]

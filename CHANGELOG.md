@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- `AttributeError` when reopening the help window under a backend whose
+  figure manager has no window object, such as Agg or a non-Qt GUI backend
+
 ## [0.1.0] — 2026-05-15
 
 ### Added
