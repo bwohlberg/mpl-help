@@ -15,7 +15,7 @@
 # Window / page heading (required).
 title: "My Application — Keyboard Shortcuts"
 
-# Key that opens the help window (default: h).
+# Key that opens the help window (default: ?).
 trigger_key: "?"
 
 # Small note at the bottom of the window (optional).

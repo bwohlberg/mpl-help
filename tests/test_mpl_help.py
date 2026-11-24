@@ -614,8 +614,14 @@ class TestConfigLoaders:
         assert mgr._sections[0].bindings[0].description == "Help"
 
     def test_trigger_key_respected(self, fig):
-        mgr = manager_from_dict(fig, dict(MINIMAL_DICT, trigger_key="?"))
-        assert mgr._trigger_key == "?"
+        mgr = manager_from_dict(fig, dict(MINIMAL_DICT, trigger_key="x"))
+        assert mgr._trigger_key == "x"
+
+    def test_trigger_key_default_matches_package_default(self, fig):
+        from mpl_help._figure import _DEFAULT_TRIGGER_KEY
+
+        mgr = manager_from_dict(fig, MINIMAL_DICT)
+        assert mgr._trigger_key == _DEFAULT_TRIGGER_KEY
 
     def test_footer_respected(self, fig):
         mgr = manager_from_dict(fig, dict(MINIMAL_DICT, footer="my footer"))

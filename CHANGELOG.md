@@ -29,6 +29,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   now always parsed with the standard library `tomllib` module
 
 ### Fixed
+- The config file loaders defaulted `trigger_key` to `h` rather than to the
+  package default of `?`, so a config file that did not set it explicitly got
+  a trigger key that also reset the monitored figure's view
 - The help window header and title claimed `h` closes the window even when
   another trigger key was configured
 - Package metadata declared the MIT license, while the package is in fact

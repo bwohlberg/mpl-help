@@ -30,6 +30,7 @@ from typing import Any
 
 from mpl_help._figure import (
     _DEFAULT_KEY_COL,
+    _DEFAULT_TRIGGER_KEY,
     HelpManager,
     HelpSection,
     KeyBinding,
@@ -101,7 +102,7 @@ def manager_from_dict(
         the package default (``0.24``).
     """
     title = config.get("title", "Keyboard Shortcuts")
-    trigger_key = config.get("trigger_key", "h")
+    trigger_key = config.get("trigger_key", _DEFAULT_TRIGGER_KEY)
     footer = config.get("footer") or None
 
     # key_column: programmatic argument takes priority, then config file, then default
