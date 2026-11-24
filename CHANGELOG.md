@@ -7,6 +7,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `close_with_figure` option, on `HelpManager` and in the config file formats:
+  when enabled, as it is by default, closing the monitored figure also closes
+  its help window
+
 ### Changed
 - Minimum supported Python raised to 3.11
 - Default `trigger_key` is now `?` rather than `h`, which matplotlib binds to

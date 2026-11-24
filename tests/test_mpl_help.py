@@ -5,6 +5,7 @@ Unit tests for mpl-help.  Run with:  pytest
 """
 
 import gc
+import json
 
 import matplotlib
 import pytest
@@ -12,7 +13,7 @@ import pytest
 matplotlib.use("Agg")
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.backend_bases import KeyEvent
+from matplotlib.backend_bases import CloseEvent, KeyEvent
 
 from mpl_help import (
     ACCENT_NAMES,
@@ -26,11 +27,24 @@ from mpl_help import (
 )
 from mpl_help._figure import (
     _build_help_figure,
+    _closing_all_figures,
     _make_colour_map,
     _resolve_accent,
     _section_height,
     _total_rows,
 )
+
+
+def _close_window(fig):
+    """Close *fig* the way an interactive backend closes a window.
+
+    The Agg backend used by these tests has no window, so it never emits
+    the ``close_event`` that every GUI backend emits from its window
+    destruction handler; synthesise it here, then destroy the figure.
+    """
+    CloseEvent("close_event", fig.canvas)._process()
+    plt.close(fig)
+
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
 
@@ -417,6 +431,89 @@ class TestHelpManager:
         mgr.detach()
         mgr.detach()
 
+    def test_closing_main_figure_closes_help(self, simple_manager, fig):
+        simple_manager.attach()
+        simple_manager.show()
+        assert simple_manager._help_is_open()
+        help_fig = simple_manager._help_fig
+        _close_window(fig)
+        assert not plt.fignum_exists(help_fig.number)
+        assert simple_manager._help_fig is None
+
+    def test_closing_main_figure_closes_help_without_attach(self, simple_manager, fig):
+        # show() alone, with no attach(), must still arm the close hook.
+        simple_manager.show()
+        help_fig = simple_manager._help_fig
+        _close_window(fig)
+        assert not plt.fignum_exists(help_fig.number)
+
+    def test_close_with_figure_disabled_leaves_help_open(self, fig, simple_section):
+        mgr = HelpManager(fig, close_with_figure=False)
+        mgr.add_section(simple_section)
+        mgr.attach()
+        mgr.show()
+        assert mgr._close_cid is None
+        help_fig = mgr._help_fig
+        _close_window(fig)
+        assert plt.fignum_exists(help_fig.number)
+        assert mgr._help_is_open()
+
+    def test_detach_clears_close_cid(self, fig):
+        mgr = HelpManager(fig)
+        mgr.attach()
+        assert mgr._close_cid is not None
+        mgr.detach()
+        assert mgr._close_cid is None
+
+    def test_close_hook_connected_once(self, simple_manager):
+        simple_manager.attach()
+        cid = simple_manager._close_cid
+        simple_manager.attach()
+        simple_manager.show()
+        assert simple_manager._close_cid == cid
+
+    def test_closing_main_figure_is_safe_with_no_help_open(self, simple_manager, fig):
+        simple_manager.attach()
+        _close_window(fig)
+        assert simple_manager._help_fig is None
+
+    def test_bulk_close_does_not_double_destroy_help(self, simple_manager, fig):
+        """``plt.close("all")`` must not close the help figure itself.
+
+        It destroys the managers in a snapshot of pyplot's registry, so a
+        help figure closed from a ``close_event`` raised inside that loop
+        is destroyed twice, which the Tk backend raises on.
+        """
+        from matplotlib._pylab_helpers import Gcf
+
+        simple_manager.attach()
+        simple_manager.show()
+        help_fig = simple_manager._help_fig
+        recorded = []
+
+        class _Probe:
+            # Agg emits no close_event, so Gcf.destroy_all on its own cannot
+            # reproduce the re-entrant close that GUI backends produce.
+            num = "__mpl_help_probe__"
+            canvas = fig.canvas
+            _cidgcf = fig.canvas.mpl_connect("button_press_event", lambda e: None)
+
+            def destroy(self):
+                recorded.append(_closing_all_figures())
+                CloseEvent("close_event", fig.canvas)._process()
+
+        Gcf.figs[_Probe.num] = _Probe()
+        try:
+            plt.close("all")
+        finally:
+            Gcf.figs.pop(_Probe.num, None)
+
+        assert recorded == [True]
+        assert simple_manager._help_fig is help_fig
+
+    def test_closing_all_figures_false_in_normal_flow(self):
+        assert _closing_all_figures() is False
+
     def test_show_opens_figure(self, simple_manager):
         simple_manager.show()
         assert simple_manager._help_is_open()
@@ -622,6 +719,29 @@ class TestConfigLoaders:
 
         mgr = manager_from_dict(fig, MINIMAL_DICT)
         assert mgr._trigger_key == _DEFAULT_TRIGGER_KEY
+
+    def test_close_with_figure_default(self, fig):
+        mgr = manager_from_dict(fig, MINIMAL_DICT)
+        assert mgr._close_with_figure is True
+
+    def test_close_with_figure_from_config(self, fig):
+        mgr = manager_from_dict(fig, dict(MINIMAL_DICT, close_with_figure=False))
+        assert mgr._close_with_figure is False
+
+    def test_close_with_figure_programmatic_overrides_config(self, fig):
+        cfg = dict(MINIMAL_DICT, close_with_figure=False)
+        mgr = manager_from_dict(fig, cfg, close_with_figure=True)
+        assert mgr._close_with_figure is True
+
+    def test_close_with_figure_through_loads_manager(self, fig):
+        mgr = loads_manager(fig, MINIMAL_JSON, fmt="json", close_with_figure=False)
+        assert mgr._close_with_figure is False
+
+    def test_close_with_figure_through_load_manager(self, fig, tmp_path):
+        path = tmp_path / "help.json"
+        path.write_text(json.dumps(dict(MINIMAL_DICT, close_with_figure=False)))
+        mgr = load_manager(fig, path)
+        assert mgr._close_with_figure is False
 
     def test_footer_respected(self, fig):
         mgr = manager_from_dict(fig, dict(MINIMAL_DICT, footer="my footer"))

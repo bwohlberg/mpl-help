@@ -18,6 +18,7 @@ See :data:`DEFAULT_PALETTE` for the built-in colour definitions and
 from __future__ import annotations
 
 import itertools
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -629,6 +630,32 @@ def _disable_default_keymap(fig: mpl.figure.Figure) -> None:
         fig.canvas.mpl_disconnect(cid)
 
 
+def _closing_all_figures() -> bool:
+    """Report whether pyplot is in the middle of closing every figure.
+
+    ``plt.close("all")`` and interpreter exit both destroy the figure
+    managers held in a snapshot of pyplot's registry, taken before the
+    loop and not updated as it goes.  A figure closed from a
+    ``close_event`` handler raised inside that loop is therefore
+    destroyed a second time when the loop reaches it, which the Tk
+    backend reports as ``TclError: can't invoke "destroy" command``.
+    matplotlib is already closing every figure in that case, so the help
+    figure needs no help.
+
+    pyplot exposes no flag for this, hence the stack inspection; a false
+    negative merely restores the unguarded behaviour.
+    """
+    frame: Any = sys._getframe(1)
+    while frame is not None:
+        if (
+            frame.f_code.co_name == "destroy_all"
+            and frame.f_globals.get("__name__") == "matplotlib._pylab_helpers"
+        ):
+            return True
+        frame = frame.f_back
+    return False
+
+
 def _raise_window(fig: mpl.figure.Figure) -> None:
     """Raise the window of ``fig`` above other windows, if supported.
 
@@ -685,6 +712,11 @@ class HelpManager:
     key_column : float
         Right edge of the key badge column, as a fraction of the figure
         width.  Must lie strictly between 0 and 1.
+    close_with_figure : bool
+        If ``True`` (default), close the help figure automatically when
+        the monitored figure is closed.  Set to ``False`` to leave the
+        help figure open, in which case it must be closed by the user
+        or via :meth:`detach`.
 
     Notes
     -----
@@ -703,6 +735,7 @@ class HelpManager:
         theme: str = "dark",
         palette: dict[str, tuple[str, str]] | None = None,
         key_column: float = _DEFAULT_KEY_COL,
+        close_with_figure: bool = True,
     ) -> None:
         if theme not in _THEME_IDX:
             raise ValueError(f"Unknown theme {theme!r}. Choose 'dark' or 'light'.")
@@ -718,8 +751,10 @@ class HelpManager:
         self._theme = theme
         self._palette = palette
         self._key_column = key_column
+        self._close_with_figure = close_with_figure
         self._sections: list[HelpSection] = []
         self._cid: int | None = None
+        self._close_cid: int | None = None
         self._help_fig: mpl.figure.Figure | None = None
         # Own figure label, so that managers on different figures do not
         # share, resize and close one another's help window.
@@ -737,6 +772,7 @@ class HelpManager:
         if self._cid is not None:
             return self
         self._cid = self._fig.canvas.mpl_connect("key_press_event", self._on_key_press)
+        self._connect_close_hook()
         return self
 
     def detach(self) -> "HelpManager":
@@ -744,6 +780,9 @@ class HelpManager:
         if self._cid is not None:
             self._fig.canvas.mpl_disconnect(self._cid)
             self._cid = None
+        if self._close_cid is not None:
+            self._fig.canvas.mpl_disconnect(self._close_cid)
+            self._close_cid = None
         self._close_help()
         return self
 
@@ -760,6 +799,25 @@ class HelpManager:
             else:
                 self._open_help()
 
+    def _connect_close_hook(self) -> None:
+        """Arrange for the help figure to close with the monitored figure.
+
+        Idempotent, and a no-op when ``close_with_figure`` is ``False``.
+        Called from both :meth:`attach` and :meth:`_open_help`, so that a
+        help figure opened by :meth:`show` alone is also covered.
+        """
+        if not self._close_with_figure or self._close_cid is not None:
+            return
+        self._close_cid = self._fig.canvas.mpl_connect(
+            "close_event", self._on_figure_close
+        )
+
+    def _on_figure_close(self, event: Any) -> None:
+        del event  # the only figure this is connected to is self._fig
+        if _closing_all_figures():
+            return
+        self._close_help()
+
     def _help_is_open(self) -> bool:
         return self._help_fig is not None and plt.fignum_exists(self._help_fig.number)
 
@@ -773,6 +831,7 @@ class HelpManager:
         return handler
 
     def _open_help(self) -> None:
+        self._connect_close_hook()
         if self._help_fig is not None and self._help_is_open():
             _raise_window(self._help_fig)
             return

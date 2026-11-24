@@ -10,6 +10,10 @@
 title       = "My Application — Keyboard Shortcuts"
 trigger_key = "?"
 footer      = "My App v1.0  •  press ? to reopen"
+# Right edge of the key badge column, as a fraction of the figure width.
+key_column  = 0.24
+# Close the help window when the monitored figure is closed.
+close_with_figure = true
 
 [[sections]]
 title  = "Help"

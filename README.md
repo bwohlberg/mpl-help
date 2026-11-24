@@ -11,6 +11,7 @@ controls.
 - **Dark and light themes**, with full per-colour overrides
 - **Per-section accent colours** — named palette or arbitrary hex
 - **Adjustable key column width** — accommodates both short keyboard shortcuts and longer mouse-event descriptions
+- **Closes with the figure it helps** — or stays open, if you prefer
 - **Works with any matplotlib backend** — TkAgg, Qt5Agg, Qt6Agg, WxAgg, …
 
 ---
@@ -118,6 +119,7 @@ Top-level keys:
 | `trigger_key` | `str` | `"?"` | Key that opens / closes the help window |
 | `footer` | `str` | auto | Small note at the bottom of the window |
 | `key_column` | `float` | `0.24` | Right edge of the key badge column, as a fraction of figure width |
+| `close_with_figure` | `bool` | `true` | Close the help window when the monitored figure is closed |
 | `sections` | `list` | — | Ordered list of section blocks (required) |
 
 Section keys:
@@ -232,6 +234,29 @@ the config file.
 
 ---
 
+## Closing the help window
+
+By default the help window closes with the figure it belongs to: when the
+monitored figure is closed — by its window close button, by matplotlib's
+quit key, or by `plt.close(fig)` — any open help window for it closes too.
+
+Pass `close_with_figure=False` to leave it open instead, in which case it is
+closed by the user, by the trigger key, or by `detach()`:
+
+```python
+help_mgr = HelpManager(fig, close_with_figure=False)
+```
+
+The same option can be set in the config file:
+
+```yaml
+close_with_figure: false
+```
+
+`detach()` always closes an open help window, whatever this option is set to.
+
+---
+
 ## Examples
 
 The [`examples/`](examples) directory includes:
@@ -259,7 +284,7 @@ The [`examples/`](examples) directory includes:
 
 ## API reference
 
-### `HelpManager(fig, title, trigger_key, footer, theme, palette, key_column)`
+### `HelpManager(fig, title, trigger_key, footer, theme, palette, key_column, close_with_figure)`
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -270,6 +295,7 @@ The [`examples/`](examples) directory includes:
 | `theme` | `str` | `"dark"` | `"dark"` or `"light"` |
 | `palette` | `dict \| None` | `None` | Per-instance palette overrides |
 | `key_column` | `float` | `0.24` | Right edge of key badge column (figure-width fraction) |
+| `close_with_figure` | `bool` | `True` | Close the help window when the monitored figure is closed |
 
 **Methods:**
 
@@ -287,13 +313,13 @@ hex string, or `None` (defaults to `"purple"`).
 
 A single key/description pair.
 
-### `load_manager(fig, path, theme="dark", palette=None, key_column=None, encoding="utf-8")`
+### `load_manager(fig, path, theme="dark", palette=None, key_column=None, close_with_figure=None, encoding="utf-8")`
 Builds a `HelpManager` from a config file. Format auto-detected from extension.
 
-### `loads_manager(fig, text, fmt, theme="dark", palette=None, key_column=None)`
+### `loads_manager(fig, text, fmt, theme="dark", palette=None, key_column=None, close_with_figure=None)`
 Builds a `HelpManager` by parsing a config string. `fmt` is `"yaml"`, `"toml"`, or `"json"`.
 
-### `manager_from_dict(fig, config, theme="dark", palette=None, key_column=None)`
+### `manager_from_dict(fig, config, theme="dark", palette=None, key_column=None, close_with_figure=None)`
 Builds a `HelpManager` directly from a Python dict.
 
 ### `DEFAULT_PALETTE`
