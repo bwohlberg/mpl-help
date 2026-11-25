@@ -20,12 +20,12 @@ jobs:
         # Every supported Python on Linux, and the oldest and newest of
         # them on macOS.
         os: [ubuntu-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         include:
           - os: macos-latest
             python-version: "3.11"
           - os: macos-latest
-            python-version: "3.13"
+            python-version: "3.14"
     steps:
       - uses: actions/checkout@v5
         with:

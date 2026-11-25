@@ -355,5 +355,4 @@ BSD 3-Clause — see [LICENSE.txt](LICENSE.txt).
 
 ## Acknowledgements
 
-Development of this package involved extensive use if Claude Sonnet 4.6
-(Anthropic).
+Development of this package involved extensive use if Claude Code.

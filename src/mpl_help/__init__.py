@@ -69,7 +69,7 @@ from mpl_help._figure import (
     KeyBinding,
 )
 
-__version__ = "0.1.0rc3"
+__version__ = "0.1.0"
 __author__ = "Brendt Wohlberg"
 __email__ = "brendt@ieee.org"
 
