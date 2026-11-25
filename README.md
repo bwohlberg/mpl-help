@@ -28,7 +28,7 @@ cd mpl-help
 pip install -e ".[config]"   # includes PyYAML for config file support
 ```
 
-### From PyPI (once published)
+### From PyPI
 
 ```bash
 pip install mpl-help                  # matplotlib only, JSON config works out of the box
