@@ -13,8 +13,7 @@ Format-agnostic configuration loader for mpl-help.
 Supported formats
 -----------------
 YAML  (.yaml / .yml)   requires  PyYAML  (``pip install pyyaml``)
-TOML  (.toml)          stdlib ``tomllib`` (Python ≥ 3.11) or
-                       ``tomli``  (``pip install tomli``)
+TOML  (.toml)          stdlib ``tomllib`` — always available
 JSON  (.json)          stdlib ``json`` — always available
 
 The theme and palette are presentation concerns and are therefore
@@ -25,11 +24,17 @@ the loader functions or directly to :class:`~mpl_help.HelpManager`.
 from __future__ import annotations
 
 import json
-import sys
+import tomllib
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 
-from mpl_help._figure import ACCENT_NAMES
+from mpl_help._figure import (
+    _DEFAULT_KEY_COL,
+    _DEFAULT_TRIGGER_KEY,
+    HelpManager,
+    HelpSection,
+    KeyBinding,
+)
 
 # ---------------------------------------------------------------------------
 # Format parsers
@@ -48,19 +53,7 @@ def _parse_yaml(text: str) -> dict:
 
 
 def _parse_toml(text: str) -> dict:
-    if sys.version_info >= (3, 11):
-        import tomllib
-
-        return tomllib.loads(text)
-    try:
-        import tomli
-
-        return tomli.loads(text)
-    except ImportError as exc:
-        raise ImportError(
-            "TOML support on Python < 3.11 requires the 'tomli' package.\n"
-            "Install it with:  pip install 'mpl-help[toml]'"
-        ) from exc
+    return tomllib.loads(text)
 
 
 def _parse_json(text: str) -> dict:
@@ -82,10 +75,11 @@ _PARSERS = {
 
 def manager_from_dict(
     fig,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     theme: str = "dark",
-    palette: Optional[Dict[str, Tuple[str, str]]] = None,
-    key_column: Optional[float] = None,
+    palette: dict[str, tuple[str, str]] | None = None,
+    key_column: float | None = None,
+    close_with_figure: bool | None = None,
 ):
     """
     Build a :class:`~mpl_help.HelpManager` from a plain Python dict.
@@ -107,16 +101,20 @@ def manager_from_dict(
         mouse-event descriptions).  Overrides any value in *config*.
         If ``None``, the value from *config* is used, falling back to
         the package default (``0.24``).
+    close_with_figure :
+        Whether closing the monitored figure also closes the help
+        figure.  Overrides any value in *config*.  If ``None``, the
+        value from *config* is used, falling back to ``True``.
     """
-    from mpl_help._figure import _DEFAULT_KEY_COL, HelpManager, HelpSection, KeyBinding
-
     title = config.get("title", "Keyboard Shortcuts")
-    trigger_key = config.get("trigger_key", "h")
+    trigger_key = config.get("trigger_key", _DEFAULT_TRIGGER_KEY)
     footer = config.get("footer") or None
 
     # key_column: programmatic argument takes priority, then config file, then default
     if key_column is None:
         key_column = float(config.get("key_column", _DEFAULT_KEY_COL))
+    if close_with_figure is None:
+        close_with_figure = bool(config.get("close_with_figure", True))
 
     mgr = HelpManager(
         fig,
@@ -126,6 +124,7 @@ def manager_from_dict(
         theme=theme,
         palette=palette,
         key_column=key_column,
+        close_with_figure=close_with_figure,
     )
 
     for sec_raw in config.get("sections", []):
@@ -161,8 +160,9 @@ def loads_manager(
     text: str,
     fmt: str,
     theme: str = "dark",
-    palette: Optional[Dict[str, Tuple[str, str]]] = None,
-    key_column: Optional[float] = None,
+    palette: dict[str, tuple[str, str]] | None = None,
+    key_column: float | None = None,
+    close_with_figure: bool | None = None,
 ):
     """
     Build a :class:`~mpl_help.HelpManager` by parsing *text*.
@@ -182,6 +182,9 @@ def loads_manager(
     key_column :
         Right edge of key badge column as a fraction of figure width.
         Overrides any value in the config text.
+    close_with_figure :
+        Whether closing the monitored figure also closes the help
+        figure.  Overrides any value in the config text.
     """
     fmt = fmt.lower().lstrip(".")
     parser = _PARSERS.get(fmt)
@@ -190,16 +193,22 @@ def loads_manager(
             f"Unsupported format {fmt!r}. " f"Choose from: {', '.join(_PARSERS)}"
         )
     return manager_from_dict(
-        fig, parser(text), theme=theme, palette=palette, key_column=key_column
+        fig,
+        parser(text),
+        theme=theme,
+        palette=palette,
+        key_column=key_column,
+        close_with_figure=close_with_figure,
     )
 
 
 def load_manager(
     fig,
-    path: Union[str, Path],
+    path: str | Path,
     theme: str = "dark",
-    palette: Optional[Dict[str, Tuple[str, str]]] = None,
-    key_column: Optional[float] = None,
+    palette: dict[str, tuple[str, str]] | None = None,
+    key_column: float | None = None,
+    close_with_figure: bool | None = None,
     encoding: str = "utf-8",
 ):
     """
@@ -221,6 +230,9 @@ def load_manager(
     key_column :
         Right edge of key badge column as a fraction of figure width.
         Overrides any value in the config file.
+    close_with_figure :
+        Whether closing the monitored figure also closes the help
+        figure.  Overrides any value in the config file.
     encoding :
         File encoding (default ``"utf-8"``).
     """
@@ -233,5 +245,11 @@ def load_manager(
         )
     text = path.read_text(encoding=encoding)
     return loads_manager(
-        fig, text, fmt=suffix, theme=theme, palette=palette, key_column=key_column
+        fig,
+        text,
+        fmt=suffix,
+        theme=theme,
+        palette=palette,
+        key_column=key_column,
+        close_with_figure=close_with_figure,
     )

@@ -23,7 +23,7 @@ Quickstart — programmatic API
         title="Navigation",
         accent="blue",
         bindings=[
-            KeyBinding("h",          "Show this help window"),
+            KeyBinding("?",          "Show this help window"),
             KeyBinding("q / Escape", "Close figure"),
         ],
     ))

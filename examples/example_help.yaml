@@ -15,12 +15,19 @@
 # Window / page heading (required).
 title: "My Application — Keyboard Shortcuts"
 
-# Key that opens the help window (default: h).
-trigger_key: h
+# Key that opens the help window (default: ?).
+trigger_key: "?"
 
 # Small note at the bottom of the window (optional).
-# If omitted, a default "press h to reopen" hint is used.
-footer: "My App v1.0  •  press h to reopen"
+# If omitted, a default "press ? to reopen" hint is used.
+footer: "My App v1.0  •  press ? to reopen"
+
+# Right edge of the key badge column, as a fraction of the figure width
+# (default: 0.24).  Widen it for long mouse-event descriptions.
+key_column: 0.24
+
+# Close the help window when the monitored figure is closed (default: true).
+close_with_figure: true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECTIONS

@@ -112,7 +112,7 @@ def demo_file(fig, theme="dark"):
     print(f"Loading from {_EXAMPLE_YAML.name}  [theme={theme}] …")
     mgr = load_manager(fig, _EXAMPLE_YAML, theme=theme)
     fig.suptitle(
-        f"Config demo — file route  [theme={theme}]  (press h)",
+        f"Config demo — file route  [theme={theme}]  (press ?)",
         color=_FIG_COLOURS[theme]["title"],
         fontsize=12,
         fontweight="bold",
@@ -126,7 +126,7 @@ def demo_file(fig, theme="dark"):
 
 INLINE_YAML = """
 title: Inline YAML Help
-trigger_key: h
+trigger_key: "?"
 footer: "loaded from an in-process string"
 
 sections:
@@ -161,7 +161,7 @@ def demo_string(fig, theme="dark"):
     print(f"Parsing inline YAML string  [theme={theme}] …")
     mgr = loads_manager(fig, INLINE_YAML, fmt="yaml", theme=theme)
     fig.suptitle(
-        f"Config demo — string route  [theme={theme}]  (press h)",
+        f"Config demo — string route  [theme={theme}]  (press ?)",
         color=_FIG_COLOURS[theme]["title"],
         fontsize=12,
         fontweight="bold",
@@ -175,14 +175,14 @@ def demo_string(fig, theme="dark"):
 
 CONFIG_DICT = {
     "title": "Dict-based Help",
-    "trigger_key": "h",
+    "trigger_key": "?",
     "footer": "built from a Python dict",
     "sections": [
         {
             "title": "General",
             "accent": "cyan",
             "bindings": [
-                {"key": "h", "desc": "Open / close this help window"},
+                {"key": "?", "desc": "Open / close this help window"},
                 {"key": "q / Escape", "desc": "Close figure"},
             ],
         },
@@ -205,7 +205,7 @@ def demo_dict(fig, theme="dark"):
     print(f"Building from Python dict  [theme={theme}] …")
     mgr = manager_from_dict(fig, CONFIG_DICT, theme=theme)
     fig.suptitle(
-        f"Config demo — dict route  [theme={theme}]  (press h)",
+        f"Config demo — dict route  [theme={theme}]  (press ?)",
         color=_FIG_COLOURS[theme]["title"],
         fontsize=12,
         fontweight="bold",

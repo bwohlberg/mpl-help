@@ -1,36 +1,42 @@
 [build-system]
-requires      = ["setuptools>=68", "wheel"]
+requires      = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name            = "mpl-help"
-version         = "0.1.0rc3"
+dynamic         = ["version"]
 description     = "Backend-independent help windows for matplotlib figures"
 readme          = "README.md"
-license         = { file = "LICENSE.txt" }
-requires-python = ">=3.9"
+license         = "BSD-3-Clause"
+license-files   = ["LICENSE.txt"]
+requires-python = ">=3.11"
 authors         = [{ name = "Brendt Wohlberg", email = "brendt@ieee.org" }]
 keywords        = ["matplotlib", "help", "keyboard shortcuts"]
 classifiers     = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
-dependencies = ["matplotlib>=3.5"]
+dependencies = ["matplotlib>=3.6"]
 
 [project.optional-dependencies]
+# TOML needs no extra: tomllib is in the standard library from Python 3.11.
 yaml   = ["pyyaml>=6.0"]
-toml   = ["tomli>=2.0; python_version < '3.11'"]
-config = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'"]
-dev    = ["pyyaml>=6.0", "tomli>=2.0; python_version < '3.11'",
-          "pytest>=7", "build", "twine"]
+config = ["pyyaml>=6.0"]
+dev    = ["pyyaml>=6.0", "pytest>=7", "build", "twine",
+          "mypy", "types-PyYAML", "pylint", "black", "isort", "pre-commit"]
 
 [project.urls]
 Homepage      = "https://github.com/bwohlberg/mpl-help"
 "Bug Tracker" = "https://github.com/bwohlberg/mpl-help/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "mpl_help.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -40,11 +46,14 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts   = "-v"
+filterwarnings = [
+    # The tests select the non-interactive Agg backend, under which the
+    # Figure.show call opening a help window cannot display anything.
+    "ignore:FigureCanvasAgg is non-interactive:UserWarning",
+]
 
 [tool.black]
-target-version = ["py312"]
+target-version = ["py311"]
 
 [tool.isort]
 profile = "black"
-

@@ -17,12 +17,18 @@ See :data:`DEFAULT_PALETTE` for the built-in colour definitions and
 
 from __future__ import annotations
 
+import itertools
+import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any
 
 import matplotlib as mpl
+import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+from matplotlib.textpath import TextToPath
 
 # ---------------------------------------------------------------------------
 # Row-height constants  (in row-units)
@@ -35,8 +41,19 @@ _BINDING_ROW = 1.0  # rows per key-binding line
 _NOTE_ROW = 0.85  # rows for an optional note
 _SECTION_GAP = 0.45  # gap between sections
 _FIG_WIDTH_IN = 7.2  # fixed figure width in inches
+# Default trigger key.  '?' is used rather than 'h' because matplotlib binds
+# 'h' to keymap.home, which resets the view of the figure being helped.
+_DEFAULT_TRIGGER_KEY = "?"
 _DEFAULT_KEY_COL = 0.24  # default right edge of key badge (fraction of axes width)
 _KEY_COL_GAP = 0.03  # fixed gap between key badge and description text
+_NOTE_LINE = 0.42  # extra rows per wrapped note line
+_BINDING_LINE = 0.46  # extra rows per wrapped description line
+_PANEL_RIGHT = 0.97  # right edge of the section panel (fraction of axes width)
+_NOTE_LEFT = 0.08  # left edge of note text
+_NOTE_RIGHT = 0.95  # right edge of the note box
+_NOTE_FONTSIZE = 7.5
+_BINDING_FONTSIZE = 8.5
+_WRAP_MARGIN = 0.98  # safety factor applied to measured text widths
 
 # ---------------------------------------------------------------------------
 # Palette  {name: (light_hex, dark_hex)}
@@ -49,7 +66,7 @@ _KEY_COL_GAP = 0.03  # fixed gap between key badge and description text
 #
 # Users may override any entry via the ``palette`` argument to HelpManager.
 
-DEFAULT_PALETTE: Dict[str, Tuple[str, str]] = {
+DEFAULT_PALETTE: dict[str, tuple[str, str]] = {
     # ── structural ──────────────────────────── light        dark
     "bg": ("#ffffff", "#0d1117"),
     "surface": ("#f6f8fa", "#161b22"),
@@ -62,7 +79,7 @@ DEFAULT_PALETTE: Dict[str, Tuple[str, str]] = {
     "note_fg": ("#1a7f37", "#3fb950"),
     "note_bg": ("#dafbe1", "#0f2a0f"),
     "note_border": ("#82cfaa", "#2ea043"),
-    "alt_row": ("#f0f2f5", "#1c2128"),
+    "alt_row": ("#f0f2f5", "#12171e"),
     "top_bar": ("#0969da", "#58a6ff"),
     # ── named accent colours ─────────────────── light        dark
     "blue": ("#0969da", "#58a6ff"),
@@ -78,7 +95,10 @@ DEFAULT_PALETTE: Dict[str, Tuple[str, str]] = {
 #: :class:`HelpSection`.
 ACCENT_NAMES = frozenset("blue purple green yellow orange red cyan".split())
 
-_THEME_IDX: Dict[str, int] = {"light": 0, "dark": 1}
+_THEME_IDX: dict[str, int] = {"light": 0, "dark": 1}
+
+# Serial number source for per-instance help figure labels.
+_HELP_FIG_COUNTER = itertools.count()
 
 
 # ---------------------------------------------------------------------------
@@ -88,8 +108,8 @@ _THEME_IDX: Dict[str, int] = {"light": 0, "dark": 1}
 
 def _make_colour_map(
     theme: str,
-    overrides: Optional[Dict[str, Tuple[str, str]]] = None,
-) -> Dict[str, str]:
+    overrides: dict[str, tuple[str, str]] | None = None,
+) -> dict[str, str]:
     """
     Return a flat ``{name: hex}`` colour map for *theme*, applying any
     user-supplied *overrides* on top of :data:`DEFAULT_PALETTE`.
@@ -114,9 +134,32 @@ def _make_colour_map(
     return colours
 
 
+def _validate_palette(palette: dict[str, tuple[str, str]] | None) -> None:
+    """
+    Check that *palette* maps names to pairs of valid colours.
+
+    Unknown names are not rejected, matching the documented behaviour that
+    they are ignored, but malformed or invalid colour values are, so that
+    they are reported here rather than when the window is first opened.
+    """
+    if not palette:
+        return
+    for name, pair in palette.items():
+        if not isinstance(pair, tuple) or len(pair) != 2:
+            raise ValueError(
+                f"Palette entry {name!r} must be a (light_hex, dark_hex) tuple, "
+                f"got {pair!r}."
+            )
+        for colour in pair:
+            if not mcolors.is_color_like(colour):
+                raise ValueError(
+                    f"Palette entry {name!r} contains invalid colour {colour!r}."
+                )
+
+
 def _resolve_accent(
-    name_or_hex: Optional[str],
-    colours: Dict[str, str],
+    name_or_hex: str | None,
+    colours: dict[str, str],
 ) -> str:
     """
     Resolve a section accent value to a hex string.
@@ -167,9 +210,21 @@ class HelpSection:
     """
 
     title: str
-    bindings: List[KeyBinding] = field(default_factory=list)
-    note: Optional[str] = None
-    accent: Optional[str] = None
+    bindings: list[KeyBinding] = field(default_factory=list)
+    note: str | None = None
+    accent: str | None = None
+
+    def __post_init__(self) -> None:
+        if (
+            self.accent is not None
+            and self.accent not in DEFAULT_PALETTE
+            and not mcolors.is_color_like(self.accent)
+        ):
+            raise ValueError(
+                f"Unknown accent {self.accent!r}. Use a palette name "
+                f"({', '.join(sorted(ACCENT_NAMES))}) or a colour such as "
+                f"'#rrggbb'."
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -177,18 +232,110 @@ class HelpSection:
 # ---------------------------------------------------------------------------
 
 
-def _section_height(section: HelpSection) -> float:
+_TEXT_TO_PATH = TextToPath()
+
+
+def _text_width(text: str, fontsize: float) -> float:
+    """
+    Width of *text* as a fraction of the figure width.
+
+    Measured from the font metrics rather than from a renderer, since the
+    layout is computed before the figure exists.
+    """
+    width_pt, _, _ = _TEXT_TO_PATH.get_text_width_height_descent(
+        text, FontProperties(size=fontsize), ismath=False
+    )
+    return width_pt / 72.0 / _FIG_WIDTH_IN
+
+
+def _wrap(
+    text: str,
+    fontsize: float,
+    width: float,
+    initial_indent: str = "",
+    subsequent_indent: str = "",
+) -> list[str]:
+    """
+    Wrap *text* at word boundaries to lines no wider than *width*.
+
+    Parameters
+    ----------
+    text :
+        The text to wrap.
+    fontsize :
+        Font size in points.
+    width :
+        Available width as a fraction of the figure width.
+    initial_indent, subsequent_indent :
+        Prefixes for the first and for the remaining lines.  They are
+        included in the returned lines and in the width measurement.
+    """
+    limit = width * _WRAP_MARGIN
+    words = text.split()
+    if not words:
+        return [initial_indent]
+    lines: list[str] = []
+    indent = initial_indent
+    current = ""
+    for word in words:
+        trial = f"{current} {word}" if current else word
+        if current and _text_width(indent + trial, fontsize) > limit:
+            lines.append(indent + current)
+            indent = subsequent_indent
+            current = word
+        else:
+            current = trial
+    lines.append(indent + current)
+    return lines
+
+
+def _description_lines(description: str, key_column: float) -> list[str]:
+    """Wrap a binding description to the space right of the key badge."""
+    return _wrap(
+        description,
+        _BINDING_FONTSIZE,
+        _PANEL_RIGHT - (key_column + _KEY_COL_GAP),
+    )
+
+
+def _note_lines(note: str) -> list[str]:
+    """Wrap a section note to the width of its box, keeping the info glyph."""
+    return _wrap(
+        note,
+        _NOTE_FONTSIZE,
+        _NOTE_RIGHT - _NOTE_LEFT,
+        initial_indent="\u2139  ",
+        subsequent_indent="   ",
+    )
+
+
+def _binding_height(binding: KeyBinding, key_column: float) -> float:
+    """Row-units consumed by one key-binding row, including wrapped lines."""
+    extra = len(_description_lines(binding.description, key_column)) - 1
+    return _BINDING_ROW + extra * _BINDING_LINE
+
+
+def _note_height(note: str) -> float:
+    """Row-units consumed by a section note, including wrapped lines."""
+    return _NOTE_ROW + (len(_note_lines(note)) - 1) * _NOTE_LINE
+
+
+def _section_height(
+    section: HelpSection, key_column: float = _DEFAULT_KEY_COL
+) -> float:
     """Total row-units consumed by one section (excluding trailing gap)."""
-    h = _SECTION_HDR + len(section.bindings) * _BINDING_ROW
+    h = _SECTION_HDR + sum(_binding_height(b, key_column) for b in section.bindings)
     if section.note:
-        h += _NOTE_ROW
+        h += _note_height(section.note)
     return h
 
 
-def _total_rows(sections: List[HelpSection]) -> float:
+def _total_rows(
+    sections: list[HelpSection], key_column: float = _DEFAULT_KEY_COL
+) -> float:
     rows = _PAD_TOP + _PAD_BOT
     for i, s in enumerate(sections):
-        rows += _section_height(s)
+        rows += _section_height(s, key_column)
         if i < len(sections) - 1:
             rows += _SECTION_GAP
     return rows
@@ -200,31 +347,37 @@ def _total_rows(sections: List[HelpSection]) -> float:
 
 
 def _build_help_figure(
-    sections: List[HelpSection],
+    sections: list[HelpSection],
     title: str,
     footer: str,
     theme: str = "dark",
-    palette_overrides: Optional[Dict[str, Tuple[str, str]]] = None,
+    palette_overrides: dict[str, tuple[str, str]] | None = None,
     key_column: float = _DEFAULT_KEY_COL,
+    trigger_key: str = _DEFAULT_TRIGGER_KEY,
+    num: str | None = None,
 ) -> mpl.figure.Figure:
-    """Create and return the fully rendered help figure."""
+    """
+    Create and return the fully rendered help figure.
+
+    *num* is the figure label: each :class:`HelpManager` passes its own, so
+    that managers attached to different figures never share a help window.
+    """
 
     C = _make_colour_map(theme, palette_overrides)
 
-    n_rows = _total_rows(sections)
+    n_rows = _total_rows(sections, key_column)
     fig_h = max(n_rows * _ROW_H_IN, 3.0)
 
-    old_toolbar = mpl.rcParams["toolbar"]
-    mpl.rcParams["toolbar"] = "None"
-    fig = plt.figure(
-        figsize=(_FIG_WIDTH_IN, fig_h),
-        facecolor=C["bg"],
-        num="__mpl_help__",
-    )
-    mpl.rcParams["toolbar"] = old_toolbar
-    fig.clf()
+    # rc_context, rather than assignment, so that a failure during figure
+    # creation cannot leave the toolbar suppressed for the whole session.
+    with mpl.rc_context({"toolbar": "None"}):
+        fig = plt.figure(
+            figsize=(_FIG_WIDTH_IN, fig_h),
+            facecolor=C["bg"],
+            num=num,
+        )
 
-    ax = fig.add_axes([0, 0, 1, 1])
+    ax = fig.add_axes((0.0, 0.0, 1.0, 1.0))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, n_rows)
     ax.axis("off")
@@ -260,7 +413,7 @@ def _build_help_figure(
     ax.text(
         0.97,
         n_rows - 0.75,
-        "press  h / q / Esc  to close",
+        f"press  {trigger_key} / q / Esc  to close",
         fontsize=7,
         color=C["muted"],
         va="center",
@@ -279,8 +432,10 @@ def _build_help_figure(
     # ── sections ──────────────────────────────────────────────────────
     y = n_rows - _PAD_TOP
 
-    for section in sections:
-        sec_h = _section_height(section)
+    for i, section in enumerate(sections):
+        if i:
+            y -= _SECTION_GAP
+        sec_h = _section_height(section, key_column)
         sec_accent = _resolve_accent(section.accent, C)
 
         # Section background panel
@@ -345,13 +500,14 @@ def _build_help_figure(
         # Key-binding rows
         for i, kb in enumerate(section.bindings):
             row_bg = C["alt_row"] if i % 2 == 0 else C["surface"]
-            row_mid = y - _BINDING_ROW / 2
+            row_h = _binding_height(kb, key_column)
+            row_mid = y - row_h / 2
 
             ax.add_patch(
                 mpatches.FancyBboxPatch(
-                    (0.03, y - _BINDING_ROW),
+                    (0.03, y - row_h),
                     0.94,
-                    _BINDING_ROW,
+                    row_h,
                     boxstyle="square,pad=0",
                     facecolor=row_bg,
                     edgecolor="none",
@@ -381,23 +537,25 @@ def _build_help_figure(
             ax.text(
                 key_column + _KEY_COL_GAP,
                 row_mid,
-                kb.description,
-                fontsize=8.5,
+                "\n".join(_description_lines(kb.description, key_column)),
+                fontsize=_BINDING_FONTSIZE,
                 color=C["text"],
                 va="center",
                 ha="left",
+                linespacing=1.3,
                 transform=ax.transData,
                 zorder=3,
             )
-            y -= _BINDING_ROW
+            y -= row_h
 
         # Optional note
         if section.note:
+            note_h = _note_height(section.note)
             ax.add_patch(
                 mpatches.FancyBboxPatch(
-                    (0.05, y - _NOTE_ROW + 0.08),
+                    (0.05, y - note_h + 0.08),
                     0.90,
-                    _NOTE_ROW - 0.08,
+                    note_h - 0.08,
                     boxstyle="round,pad=0.05",
                     facecolor=C["note_bg"],
                     edgecolor=C["note_border"],
@@ -407,20 +565,18 @@ def _build_help_figure(
                 )
             )
             ax.text(
-                0.08,
-                y - _NOTE_ROW / 2 + 0.04,
-                f"ℹ  {section.note}",
-                fontsize=7.5,
+                _NOTE_LEFT,
+                y - note_h / 2 + 0.04,
+                "\n".join(_note_lines(section.note)),
+                fontsize=_NOTE_FONTSIZE,
                 color=C["note_fg"],
                 va="center",
                 ha="left",
-                wrap=True,
+                linespacing=1.3,
                 transform=ax.transData,
                 zorder=4,
             )
-            y -= _NOTE_ROW
-
-        y -= _SECTION_GAP
+            y -= note_h
 
     # ── footer ────────────────────────────────────────────────────────
     ax.axhline(
@@ -455,6 +611,69 @@ def _build_help_figure(
 
 
 # ---------------------------------------------------------------------------
+# Window utilities
+# ---------------------------------------------------------------------------
+
+
+def _disable_default_keymap(fig: mpl.figure.Figure) -> None:
+    """
+    Detach matplotlib's default key bindings from *fig*.
+
+    The help figure is a rendered document, not a plot: leaving the default
+    bindings connected lets keys such as ``l`` (log scale), ``s`` (save) and
+    ``g`` (grid) act on the axes the help text is drawn in, destroying the
+    layout.
+    """
+    manager = fig.canvas.manager
+    cid = getattr(manager, "key_press_handler_id", None)
+    if cid is not None:
+        fig.canvas.mpl_disconnect(cid)
+
+
+def _closing_all_figures() -> bool:
+    """Report whether pyplot is in the middle of closing every figure.
+
+    ``plt.close("all")`` and interpreter exit both destroy the figure
+    managers held in a snapshot of pyplot's registry, taken before the
+    loop and not updated as it goes.  A figure closed from a
+    ``close_event`` handler raised inside that loop is therefore
+    destroyed a second time when the loop reaches it, which the Tk
+    backend reports as ``TclError: can't invoke "destroy" command``.
+    matplotlib is already closing every figure in that case, so the help
+    figure needs no help.
+
+    pyplot exposes no flag for this, hence the stack inspection; a false
+    negative merely restores the unguarded behaviour.
+    """
+    frame: Any = sys._getframe(1)
+    while frame is not None:
+        if (
+            frame.f_code.co_name == "destroy_all"
+            and frame.f_globals.get("__name__") == "matplotlib._pylab_helpers"
+        ):
+            return True
+        frame = frame.f_back
+    return False
+
+
+def _raise_window(fig: mpl.figure.Figure) -> None:
+    """Raise the window of ``fig`` above other windows, if supported.
+
+    The window object and the method used to raise it are both
+    backend-specific, and are entirely absent for non-interactive
+    backends, so the request is silently ignored when the active backend
+    provides no mechanism for it.
+    """
+    manager = fig.canvas.manager
+    if manager is None:
+        return
+    window = getattr(manager, "window", None)
+    raise_ = getattr(window, "raise_", None)
+    if callable(raise_):
+        raise_()
+
+
+# ---------------------------------------------------------------------------
 # HelpManager
 # ---------------------------------------------------------------------------
 
@@ -470,7 +689,10 @@ class HelpManager:
     title : str
         Heading displayed at the top of the help figure.
     trigger_key : str
-        Key that opens / closes the help figure (default ``"h"``).
+        Key that opens / closes the help figure (default ``"?"``).
+        Note that matplotlib binds some keys by default, including ``"h"``
+        to ``keymap.home``, which resets the monitored figure's view; a
+        trigger key that is also bound by matplotlib will do both.
     footer : str, optional
         Small note at the bottom of the help figure.
     theme : str
@@ -485,19 +707,43 @@ class HelpManager:
             }
 
         Any key present in :data:`DEFAULT_PALETTE` may be overridden.
-        Unknown keys are silently ignored.
+        Unknown keys are silently ignored, but invalid colour values are
+        rejected here rather than when the window is first opened.
+    key_column : float
+        Right edge of the key badge column, as a fraction of the figure
+        width.  Must lie strictly between 0 and 1.
+    close_with_figure : bool
+        If ``True`` (default), close the help figure automatically when
+        the monitored figure is closed.  Set to ``False`` to leave the
+        help figure open, in which case it must be closed by the user
+        or via :meth:`detach`.
+
+    Notes
+    -----
+    Keep a reference to the manager alive for as long as the monitored
+    figure is in use.  matplotlib's callback registry holds the keypress
+    handler weakly, so a garbage-collected manager stops responding
+    without any error being reported.
     """
 
     def __init__(
         self,
-        fig,
+        fig: mpl.figure.Figure,
         title: str = "Keyboard Shortcuts",
-        trigger_key: str = "h",
-        footer: Optional[str] = None,
+        trigger_key: str = _DEFAULT_TRIGGER_KEY,
+        footer: str | None = None,
         theme: str = "dark",
-        palette: Optional[Dict[str, Tuple[str, str]]] = None,
+        palette: dict[str, tuple[str, str]] | None = None,
         key_column: float = _DEFAULT_KEY_COL,
+        close_with_figure: bool = True,
     ) -> None:
+        if theme not in _THEME_IDX:
+            raise ValueError(f"Unknown theme {theme!r}. Choose 'dark' or 'light'.")
+        if not 0.0 < key_column < 1.0:
+            raise ValueError(
+                f"key_column must lie strictly between 0 and 1, got {key_column!r}."
+            )
+        _validate_palette(palette)
         self._fig = fig
         self._title = title
         self._trigger_key = trigger_key
@@ -505,9 +751,14 @@ class HelpManager:
         self._theme = theme
         self._palette = palette
         self._key_column = key_column
-        self._sections: List[HelpSection] = []
-        self._cid = None
-        self._help_fig: Optional[mpl.figure.Figure] = None
+        self._close_with_figure = close_with_figure
+        self._sections: list[HelpSection] = []
+        self._cid: int | None = None
+        self._close_cid: int | None = None
+        self._help_fig: mpl.figure.Figure | None = None
+        # Own figure label, so that managers on different figures do not
+        # share, resize and close one another's help window.
+        self._help_fig_num = f"__mpl_help_{next(_HELP_FIG_COUNTER)}__"
 
     # ── public API ────────────────────────────────────────────────────
 
@@ -521,6 +772,7 @@ class HelpManager:
         if self._cid is not None:
             return self
         self._cid = self._fig.canvas.mpl_connect("key_press_event", self._on_key_press)
+        self._connect_close_hook()
         return self
 
     def detach(self) -> "HelpManager":
@@ -528,6 +780,9 @@ class HelpManager:
         if self._cid is not None:
             self._fig.canvas.mpl_disconnect(self._cid)
             self._cid = None
+        if self._close_cid is not None:
+            self._fig.canvas.mpl_disconnect(self._close_cid)
+            self._close_cid = None
         self._close_help()
         return self
 
@@ -544,33 +799,65 @@ class HelpManager:
             else:
                 self._open_help()
 
+    def _connect_close_hook(self) -> None:
+        """Arrange for the help figure to close with the monitored figure.
+
+        Idempotent, and a no-op when ``close_with_figure`` is ``False``.
+        Called from both :meth:`attach` and :meth:`_open_help`, so that a
+        help figure opened by :meth:`show` alone is also covered.
+        """
+        if not self._close_with_figure or self._close_cid is not None:
+            return
+        self._close_cid = self._fig.canvas.mpl_connect(
+            "close_event", self._on_figure_close
+        )
+
+    def _on_figure_close(self, event: Any) -> None:
+        del event  # the only figure this is connected to is self._fig
+        if _closing_all_figures():
+            return
+        self._close_help()
+
     def _help_is_open(self) -> bool:
         return self._help_fig is not None and plt.fignum_exists(self._help_fig.number)
 
+    def _close_on_key(self, key: str) -> Callable[[Any], None]:
+        """Construct a key_press_event handler closing the help figure on ``key``."""
+
+        def handler(event: Any) -> None:
+            if event.key == key:
+                self._close_help()
+
+        return handler
+
     def _open_help(self) -> None:
-        if self._help_is_open():
-            self._help_fig.canvas.manager.window.raise_()
+        self._connect_close_hook()
+        if self._help_fig is not None and self._help_is_open():
+            _raise_window(self._help_fig)
             return
 
-        self._help_fig = _build_help_figure(
+        help_fig = _build_help_figure(
             self._sections,
             self._title,
             self._footer,
             theme=self._theme,
             palette_overrides=self._palette,
             key_column=self._key_column,
+            trigger_key=self._trigger_key,
+            num=self._help_fig_num,
         )
+        self._help_fig = help_fig
+        _disable_default_keymap(help_fig)
         for key in (self._trigger_key, "q", "escape"):
-            self._help_fig.canvas.mpl_connect(
-                "key_press_event",
-                lambda e, k=key: self._close_help() if e.key == k else None,
+            help_fig.canvas.mpl_connect("key_press_event", self._close_on_key(key))
+        manager = help_fig.canvas.manager
+        if manager is not None:
+            manager.set_window_title(
+                f"{self._title}  —  press {self._trigger_key} / q / Esc to close"
             )
-        self._help_fig.canvas.manager.set_window_title(
-            f"{self._title}  —  press h / q / Esc to close"
-        )
-        self._help_fig.show()
+        help_fig.show()
 
     def _close_help(self) -> None:
-        if self._help_is_open():
+        if self._help_fig is not None and self._help_is_open():
             plt.close(self._help_fig)
         self._help_fig = None

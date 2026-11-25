@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
     -   id: check-added-large-files
     -   id: check-merge-conflict
@@ -15,6 +15,7 @@ repos:
       entry: autoflake
       language: python
       language_version: python3
+      additional_dependencies: [autoflake]
       types: [python]
       args: ['-i', '--remove-all-unused-imports',  '--ignore-init-module-imports']
     - id: isort
@@ -23,6 +24,7 @@ repos:
       entry: isort
       language: python
       language_version: python3
+      additional_dependencies: [isort]
       types: [python]
     - id: black
       name: black
@@ -30,12 +32,15 @@ repos:
       description: 'Black: The uncompromising Python code formatter'
       language: python
       language_version: python3
+      additional_dependencies: ['black>=24.3.0']
       types: [python]
     - id: pylint
       name: pylint
       entry: pylint
       language: python
       language_version: python3
+      additional_dependencies: [pylint]
       types: [python]
-      exclude: ^(examples|docs)
-      args: ['--score=n', '--disable=all', '--enable=missing-docstring,broad-exception-raised']
+      exclude: ^(examples|docs|tests)
+      args: ['--score=n', '--disable=all',
+             '--enable=missing-docstring,broad-exception-raised,unused-import,unused-variable']
