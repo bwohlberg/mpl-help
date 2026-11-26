@@ -118,7 +118,7 @@ Top-level keys:
 | `title` | `str` | `"Keyboard Shortcuts"` | Heading shown in the help window |
 | `trigger_key` | `str` | `"?"` | Key that opens / closes the help window |
 | `footer` | `str` | auto | Small note at the bottom of the window |
-| `key_column` | `float` | `0.24` | Right edge of the key badge column, as a fraction of figure width |
+| `key_column` | `float` | `0.24` | Minimum right edge of the key badge column, as a fraction of figure width; widened to fit the widest key |
 | `close_with_figure` | `bool` | `true` | Close the help window when the monitored figure is closed |
 | `sections` | `list` | — | Ordered list of section blocks (required) |
 
@@ -215,13 +215,22 @@ argument like `theme` — it is never read from the config file.
 
 Short keyboard shortcuts (`h`, `q / Escape`) fit comfortably in the default
 key column. Longer descriptions of mouse interactions — e.g.
-`"Mouse wheel (colorbar bottom half)"` — need more room and will be clipped
-or overflow the left margin at the default width. Widen the column with
-`key_column` (a fraction of figure width, default `0.24`):
+`"Mouse wheel (colorbar bottom half)"` — need more room, and are given it
+automatically: since the badges are right-aligned on the key column, one
+wider than the column would extend past the left edge of the window, so the
+column is widened to fit the widest badge, at the cost of width for the
+descriptions, which wrap. The `key_column` value (a fraction of figure
+width, default `0.24`) is therefore a minimum rather than a fixed position,
+and need only be set to hold the column open wider than its content
+requires:
 
 ```python
 load_manager(fig, "my_app_help.yaml", key_column=0.45)
 ```
+
+The column is not widened beyond 0.6 of the figure width, which leaves the
+description column usable; a key too wide for that is wrapped onto as many
+lines as it needs.
 
 `key_column` can also be set directly in the config file:
 
@@ -294,7 +303,7 @@ The [`examples/`](examples) directory includes:
 | `footer` | `str \| None` | auto | Note at the bottom of the window |
 | `theme` | `str` | `"dark"` | `"dark"` or `"light"` |
 | `palette` | `dict \| None` | `None` | Per-instance palette overrides |
-| `key_column` | `float` | `0.24` | Right edge of key badge column (figure-width fraction) |
+| `key_column` | `float` | `0.24` | Minimum right edge of key badge column (figure-width fraction), widened to fit the widest key |
 | `close_with_figure` | `bool` | `True` | Close the help window when the monitored figure is closed |
 
 **Methods:**

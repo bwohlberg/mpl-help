@@ -44,15 +44,19 @@ _FIG_WIDTH_IN = 7.2  # fixed figure width in inches
 # Default trigger key.  '?' is used rather than 'h' because matplotlib binds
 # 'h' to keymap.home, which resets the view of the figure being helped.
 _DEFAULT_TRIGGER_KEY = "?"
-_DEFAULT_KEY_COL = 0.24  # default right edge of key badge (fraction of axes width)
+_DEFAULT_KEY_COL = 0.24  # default minimum right edge of key badge column
+_KEY_COL_MAX = 0.60  # key badge column is not widened beyond this
 _KEY_COL_GAP = 0.03  # fixed gap between key badge and description text
 _NOTE_LINE = 0.42  # extra rows per wrapped note line
 _BINDING_LINE = 0.46  # extra rows per wrapped description line
+_PANEL_LEFT = 0.03  # left edge of the section panel (fraction of axes width)
 _PANEL_RIGHT = 0.97  # right edge of the section panel (fraction of axes width)
 _NOTE_LEFT = 0.08  # left edge of note text
 _NOTE_RIGHT = 0.95  # right edge of the note box
 _NOTE_FONTSIZE = 7.5
 _BINDING_FONTSIZE = 8.5
+_KEY_FONTSIZE = 8
+_KEY_BADGE_PAD = 0.28  # key badge padding, in units of its font size
 _WRAP_MARGIN = 0.98  # safety factor applied to measured text widths
 
 # ---------------------------------------------------------------------------
@@ -234,23 +238,31 @@ class HelpSection:
 
 _TEXT_TO_PATH = TextToPath()
 
+# The fonts in which the text of each kind is drawn, so that it is measured
+# as it is drawn: a key badge in particular is in a bold monospace font,
+# which is wider than the default font at the same size.
+_NOTE_FONT = FontProperties(size=_NOTE_FONTSIZE)
+_BINDING_FONT = FontProperties(size=_BINDING_FONTSIZE)
+_KEY_FONT = FontProperties(size=_KEY_FONTSIZE, family="monospace", weight="bold")
+_KEY_PAD = _KEY_BADGE_PAD * _KEY_FONTSIZE / 72.0 / _FIG_WIDTH_IN  # as a fraction
 
-def _text_width(text: str, fontsize: float) -> float:
+
+def _text_width(text: str, font: FontProperties) -> float:
     """
-    Width of *text* as a fraction of the figure width.
+    Width of *text* in *font*, as a fraction of the figure width.
 
     Measured from the font metrics rather than from a renderer, since the
     layout is computed before the figure exists.
     """
     width_pt, _, _ = _TEXT_TO_PATH.get_text_width_height_descent(
-        text, FontProperties(size=fontsize), ismath=False
+        text, font, ismath=False
     )
     return width_pt / 72.0 / _FIG_WIDTH_IN
 
 
 def _wrap(
     text: str,
-    fontsize: float,
+    font: FontProperties,
     width: float,
     initial_indent: str = "",
     subsequent_indent: str = "",
@@ -262,8 +274,8 @@ def _wrap(
     ----------
     text :
         The text to wrap.
-    fontsize :
-        Font size in points.
+    font :
+        The font in which the text is drawn.
     width :
         Available width as a fraction of the figure width.
     initial_indent, subsequent_indent :
@@ -279,7 +291,7 @@ def _wrap(
     current = ""
     for word in words:
         trial = f"{current} {word}" if current else word
-        if current and _text_width(indent + trial, fontsize) > limit:
+        if current and _text_width(indent + trial, font) > limit:
             lines.append(indent + current)
             indent = subsequent_indent
             current = word
@@ -293,16 +305,54 @@ def _description_lines(description: str, key_column: float) -> list[str]:
     """Wrap a binding description to the space right of the key badge."""
     return _wrap(
         description,
-        _BINDING_FONTSIZE,
+        _BINDING_FONT,
         _PANEL_RIGHT - (key_column + _KEY_COL_GAP),
     )
+
+
+def _key_badge_width(key: str) -> float:
+    """Width of the badge of *key* as a fraction of the figure width.
+
+    The badge extends beyond its text by its padding on each side.
+    """
+    return _text_width(key, _KEY_FONT) + 2 * _KEY_PAD
+
+
+def _key_lines(key: str, key_column: float) -> list[str]:
+    """Wrap a key to the width of the badge column.
+
+    Only a key too wide for the widest column that _fit_key_column will
+    use is wrapped, since a key is usually short enough for the column to
+    be fitted to it instead.
+    """
+    return _wrap(key, _KEY_FONT, key_column - _PANEL_LEFT - 2 * _KEY_PAD)
+
+
+def _fit_key_column(sections: list[HelpSection], key_column: float) -> float:
+    """Widen *key_column* as necessary to fit the widest key badge.
+
+    The badges are right-aligned on the key column, so one wider than the
+    column extends to the left of the section panel, and beyond the edge
+    of the figure if it is wider still, which truncates it. The requested
+    column is therefore a minimum, widened here to fit the widest badge,
+    but not beyond _KEY_COL_MAX, which leaves the description column
+    usable: a key too wide for that column is wrapped by _key_lines.
+    """
+    widest = max(
+        (_key_badge_width(b.key) for s in sections for b in s.bindings),
+        default=0.0,
+    )
+    # The widest badge is allowed the margin by which _wrap underestimates
+    # the space available to it, so that a column fitted to a key does not
+    # then wrap that key
+    return min(max(key_column, _PANEL_LEFT + widest / _WRAP_MARGIN), _KEY_COL_MAX)
 
 
 def _note_lines(note: str) -> list[str]:
     """Wrap a section note to the width of its box, keeping the info glyph."""
     return _wrap(
         note,
-        _NOTE_FONTSIZE,
+        _NOTE_FONT,
         _NOTE_RIGHT - _NOTE_LEFT,
         initial_indent="\u2139  ",
         subsequent_indent="   ",
@@ -311,7 +361,13 @@ def _note_lines(note: str) -> list[str]:
 
 def _binding_height(binding: KeyBinding, key_column: float) -> float:
     """Row-units consumed by one key-binding row, including wrapped lines."""
-    extra = len(_description_lines(binding.description, key_column)) - 1
+    extra = (
+        max(
+            len(_description_lines(binding.description, key_column)),
+            len(_key_lines(binding.key, key_column)),
+        )
+        - 1
+    )
     return _BINDING_ROW + extra * _BINDING_LINE
 
 
@@ -364,6 +420,9 @@ def _build_help_figure(
     """
 
     C = _make_colour_map(theme, palette_overrides)
+
+    # The requested key column is a minimum, widened to fit the key badges
+    key_column = _fit_key_column(sections, key_column)
 
     n_rows = _total_rows(sections, key_column)
     fig_h = max(n_rows * _ROW_H_IN, 3.0)
@@ -422,7 +481,7 @@ def _build_help_figure(
     )
     ax.axhline(
         n_rows - _PAD_TOP + 0.22,
-        xmin=0.03,
+        xmin=_PANEL_LEFT,
         xmax=0.97,
         color=C["border"],
         linewidth=0.7,
@@ -441,8 +500,8 @@ def _build_help_figure(
         # Section background panel
         ax.add_patch(
             mpatches.FancyBboxPatch(
-                (0.03, y - sec_h),
-                0.94,
+                (_PANEL_LEFT, y - sec_h),
+                _PANEL_RIGHT - _PANEL_LEFT,
                 sec_h,
                 boxstyle="round,pad=0.0",
                 facecolor=C["surface"],
@@ -456,8 +515,8 @@ def _build_help_figure(
         # Section title bar background
         ax.add_patch(
             mpatches.FancyBboxPatch(
-                (0.03, y - _SECTION_HDR),
-                0.94,
+                (_PANEL_LEFT, y - _SECTION_HDR),
+                _PANEL_RIGHT - _PANEL_LEFT,
                 _SECTION_HDR,
                 boxstyle="square,pad=0",
                 facecolor=C["panel"],
@@ -470,7 +529,7 @@ def _build_help_figure(
         # Accent stripe on left edge
         ax.add_patch(
             mpatches.FancyBboxPatch(
-                (0.03, y - _SECTION_HDR),
+                (_PANEL_LEFT, y - _SECTION_HDR),
                 0.004,
                 _SECTION_HDR,
                 boxstyle="square,pad=0",
@@ -505,8 +564,8 @@ def _build_help_figure(
 
             ax.add_patch(
                 mpatches.FancyBboxPatch(
-                    (0.03, y - row_h),
-                    0.94,
+                    (_PANEL_LEFT, y - row_h),
+                    _PANEL_RIGHT - _PANEL_LEFT,
                     row_h,
                     boxstyle="square,pad=0",
                     facecolor=row_bg,
@@ -518,8 +577,8 @@ def _build_help_figure(
             ax.text(
                 key_column,
                 row_mid,
-                kb.key,
-                fontsize=8,
+                "\n".join(_key_lines(kb.key, key_column)),
+                fontsize=_KEY_FONTSIZE,
                 fontweight="bold",
                 fontfamily="monospace",
                 color=C["key_fg"],
@@ -581,7 +640,7 @@ def _build_help_figure(
     # ── footer ────────────────────────────────────────────────────────
     ax.axhline(
         _PAD_BOT - 0.15,
-        xmin=0.03,
+        xmin=_PANEL_LEFT,
         xmax=0.97,
         color=C["border"],
         linewidth=0.7,
@@ -710,8 +769,13 @@ class HelpManager:
         Unknown keys are silently ignored, but invalid colour values are
         rejected here rather than when the window is first opened.
     key_column : float
-        Right edge of the key badge column, as a fraction of the figure
-        width.  Must lie strictly between 0 and 1.
+        Minimum right edge of the key badge column, as a fraction of the
+        figure width.  Must lie strictly between 0 and 1.  The badges are
+        right-aligned on the column, so a badge wider than the column
+        would extend past the left edge of the figure; the column is
+        therefore widened as necessary to fit the widest badge, up to 0.6
+        of the figure width, beyond which a key is instead wrapped onto
+        as many lines as it needs.
     close_with_figure : bool
         If ``True`` (default), close the help figure automatically when
         the monitored figure is closed.  Set to ``False`` to leave the
