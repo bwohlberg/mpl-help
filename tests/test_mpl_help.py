@@ -330,6 +330,33 @@ class TestKeyColumnFit:
             bounds.append((left, right, text))
         return bounds
 
+    def test_text_is_measured_as_it_is_drawn(self):
+        """A measured width must agree with the width drawn.
+
+        The layout is computed before the figure that it describes
+        exists. Measuring from the font metrics rather than with the
+        renderer underestimated the width drawn, by a margin that depends
+        on the version of matplotlib: under matplotlib 3.11 it was 4.65%
+        for the key below, which took the badge outside the panel that
+        the fitted column had been expected to keep it within.
+        """
+        from mpl_help._figure import _KEY_FONT, _build_help_figure, _text_width
+
+        section = HelpSection("Range", [KeyBinding(self.WIDE_KEY, "d")])
+        fig = _build_help_figure([section], "T", "F")
+        fig.canvas.draw()
+        axes = fig.axes[0]
+        inverse = axes.transData.inverted()
+        renderer = fig.canvas.get_renderer()
+        text = next(t for t in axes.texts if t.get_text() == self.WIDE_KEY)
+        bbox = text.get_window_extent(renderer)
+        (left, _), (right, _) = inverse.transform(
+            [(bbox.x0, bbox.y0), (bbox.x1, bbox.y1)]
+        )
+        assert right - left == pytest.approx(
+            _text_width(self.WIDE_KEY, _KEY_FONT), rel=0.01
+        )
+
     def test_requested_column_kept_when_keys_fit(self):
         from mpl_help._figure import _fit_key_column
 

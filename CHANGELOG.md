@@ -19,6 +19,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is not widened beyond 0.6 of the figure width, and a key too wide for
   that column is wrapped onto as many lines as it needs, so that no key can
   be truncated.
+- Text is measured with the renderer that draws it, rather than from the
+  font metrics alone, which underestimated the width drawn by a margin
+  that depends on the version of matplotlib: 0.9% of a key under 3.10 but
+  4.65% under 3.11, which is more than the margin that the wrapping of
+  text allows for.  The layout therefore no longer leaves text wider than
+  the space allowed for it, and a help window is built more quickly, since
+  measuring with the renderer does not build the glyph paths that
+  measuring from the metrics did.
 - The box around a section note no longer extends beyond the section panel
   on each side.  Its margins came from the padding of its boxstyle, which
   is applied in data coordinates: these span the figure width in x but the

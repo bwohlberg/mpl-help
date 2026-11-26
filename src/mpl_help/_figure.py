@@ -17,6 +17,7 @@ See :data:`DEFAULT_PALETTE` for the built-in colour definitions and
 
 from __future__ import annotations
 
+import functools
 import itertools
 import sys
 from collections.abc import Callable
@@ -27,8 +28,9 @@ import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 from matplotlib.font_manager import FontProperties
-from matplotlib.textpath import TextToPath
 
 # ---------------------------------------------------------------------------
 # Row-height constants  (in row-units)
@@ -238,7 +240,22 @@ class HelpSection:
 # ---------------------------------------------------------------------------
 
 
-_TEXT_TO_PATH = TextToPath()
+@functools.lru_cache(maxsize=1)
+def _measuring_canvas() -> FigureCanvasAgg:
+    """An off-screen canvas on which text is measured before it is drawn.
+
+    Its figure is of the width of a help window, and is not managed by
+    pyplot, so that measuring disturbs neither the figures of the
+    application nor the state of pyplot. The canvas is returned rather
+    than the figure because the renderer that measures the text belongs
+    to it.
+    """
+    # A fixed dpi, rather than the rcParams value at the moment of the first
+    # measurement, so that the measurements of a session are consistent with
+    # each other however the configuration changes within it
+    figure = Figure(figsize=(_FIG_WIDTH_IN, 1.0), dpi=100.0)
+    return FigureCanvasAgg(figure)
+
 
 # The fonts in which the text of each kind is drawn, so that it is measured
 # as it is drawn: a key badge in particular is in a bold monospace font,
@@ -249,17 +266,24 @@ _KEY_FONT = FontProperties(size=_KEY_FONTSIZE, family="monospace", weight="bold"
 _KEY_PAD = _KEY_BADGE_PAD * _KEY_FONTSIZE / 72.0 / _FIG_WIDTH_IN  # as a fraction
 
 
+@functools.lru_cache(maxsize=2048)
 def _text_width(text: str, font: FontProperties) -> float:
     """
     Width of *text* in *font*, as a fraction of the figure width.
 
-    Measured from the font metrics rather than from a renderer, since the
-    layout is computed before the figure exists.
+    The layout is computed before the figure that it describes exists, so
+    the text is measured in an off-screen figure of the same width, with
+    the renderer that will draw it rather than from the font metrics
+    alone: the two do not agree, and by a margin that depends on the
+    version of matplotlib, so that a layout computed from the metrics
+    leaves text wider than the space allowed for it. The measurement is
+    cached, since wrapping measures each line of text once per word.
     """
-    width_pt, _, _ = _TEXT_TO_PATH.get_text_width_height_descent(
-        text, font, ismath=False
-    )
-    return width_pt / 72.0 / _FIG_WIDTH_IN
+    canvas = _measuring_canvas()
+    artist = canvas.figure.text(0.0, 0.0, text, fontproperties=font)
+    extent = artist.get_window_extent(canvas.get_renderer())
+    artist.remove()
+    return extent.width / canvas.figure.bbox.width
 
 
 def _wrap(
