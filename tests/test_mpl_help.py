@@ -259,6 +259,44 @@ class TestLayout:
                 _section_height(section, key_column)
             )
 
+    def test_note_box_matches_the_section_panel(self):
+        """A note box has the edges of the section panel it belongs to.
+
+        The padding of a boxstyle is in data coordinates, which span the
+        figure width in x but the rows of the layout in y, so a padding
+        large enough to be seen in y took the box outside the figure in x.
+        """
+        import matplotlib.colors as mcolors
+
+        from mpl_help._figure import (
+            _PANEL_LEFT,
+            _PANEL_RIGHT,
+            DEFAULT_PALETTE,
+            _build_help_figure,
+        )
+
+        note = (
+            "The standard matplotlib shortcuts also apply, including s to "
+            "save the figure and f1 for the matplotlib help."
+        )
+        section = HelpSection("Nav", [KeyBinding("x", "y")], note=note)
+        fig = _build_help_figure([section], "T", "F", theme="dark")
+        fig.canvas.draw()
+        axes = fig.axes[0]
+        inverse = axes.transData.inverted()
+        renderer = fig.canvas.get_renderer()
+        note_bg = mcolors.to_hex(DEFAULT_PALETTE["note_bg"][1])
+        boxes = [
+            p for p in axes.patches if mcolors.to_hex(p.get_facecolor()) == note_bg
+        ]
+        assert len(boxes) == 1
+        bbox = boxes[0].get_window_extent(renderer)
+        (left, _), (right, _) = inverse.transform(
+            [(bbox.x0, bbox.y0), (bbox.x1, bbox.y1)]
+        )
+        assert left == pytest.approx(_PANEL_LEFT, abs=0.002)
+        assert right == pytest.approx(_PANEL_RIGHT, abs=0.002)
+
     def test_total_rows_padding(self):
         from mpl_help._figure import _PAD_BOT, _PAD_TOP
 
@@ -266,6 +304,142 @@ class TestLayout:
 
 
 # ── figure builder ────────────────────────────────────────────────────────────
+
+
+class TestKeyColumnFit:
+    """The key badge column is fitted to the keys it has to display."""
+
+    # A key of the length that a plotting package generates when it names a
+    # mouse action rather than a key, which is wider than the default column
+    WIDE_KEY = "Mouse wheel in lower half of colorbar"
+
+    def _badge_bounds(self, fig):
+        """Left and right edge of each key badge, in axes coordinates."""
+        fig.canvas.draw()
+        axes = fig.axes[0]
+        inverse = axes.transData.inverted()
+        renderer = fig.canvas.get_renderer()
+        bounds = []
+        for text in axes.texts:
+            if text.get_ha() != "right" or text.get_bbox_patch() is None:
+                continue
+            bbox = text.get_bbox_patch().get_window_extent(renderer)
+            (left, _), (right, _) = inverse.transform(
+                [(bbox.x0, bbox.y0), (bbox.x1, bbox.y1)]
+            )
+            bounds.append((left, right, text))
+        return bounds
+
+    def test_text_is_measured_as_it_is_drawn(self):
+        """A measured width must agree with the width drawn.
+
+        The layout is computed before the figure that it describes
+        exists. Measuring from the font metrics rather than with the
+        renderer underestimated the width drawn, by a margin that depends
+        on the version of matplotlib: under matplotlib 3.11 it was 4.65%
+        for the key below, which took the badge outside the panel that
+        the fitted column had been expected to keep it within.
+        """
+        from mpl_help._figure import _KEY_FONT, _build_help_figure, _text_width
+
+        section = HelpSection("Range", [KeyBinding(self.WIDE_KEY, "d")])
+        fig = _build_help_figure([section], "T", "F")
+        fig.canvas.draw()
+        axes = fig.axes[0]
+        inverse = axes.transData.inverted()
+        renderer = fig.canvas.get_renderer()
+        text = next(t for t in axes.texts if t.get_text() == self.WIDE_KEY)
+        bbox = text.get_window_extent(renderer)
+        (left, _), (right, _) = inverse.transform(
+            [(bbox.x0, bbox.y0), (bbox.x1, bbox.y1)]
+        )
+        assert right - left == pytest.approx(
+            _text_width(self.WIDE_KEY, _KEY_FONT), rel=0.01
+        )
+
+    def test_requested_column_kept_when_keys_fit(self):
+        from mpl_help._figure import _fit_key_column
+
+        section = HelpSection("Nav", [KeyBinding("x", "y"), KeyBinding("q", "quit")])
+        for key_column in (0.24, 0.45):
+            assert _fit_key_column([section], key_column) == pytest.approx(key_column)
+
+    def test_column_widened_for_a_wide_key(self):
+        from mpl_help._figure import _fit_key_column
+
+        section = HelpSection("Nav", [KeyBinding(self.WIDE_KEY, "d")])
+        assert _fit_key_column([section], 0.24) > 0.24
+
+    def test_wide_key_badge_stays_within_panel(self):
+        """A badge wider than the requested column must not be truncated.
+
+        The badges are right-aligned on the key column, so one too wide
+        for it used to extend beyond the left edge of the figure.
+        """
+        from mpl_help._figure import _PANEL_LEFT, _build_help_figure
+
+        section = HelpSection(
+            "Range",
+            [KeyBinding(self.WIDE_KEY, "Increase or decrease the colormap vmin")],
+        )
+        fig = _build_help_figure([section], "T", "F", key_column=0.24)
+        for left, _, text in self._badge_bounds(fig):
+            assert left >= _PANEL_LEFT, text.get_text()
+
+    def test_fitted_column_does_not_wrap_the_key_fitted_to(self):
+        """A column widened to fit a key displays it on one line."""
+        from mpl_help._figure import _build_help_figure
+
+        section = HelpSection("Range", [KeyBinding(self.WIDE_KEY, "d")])
+        fig = _build_help_figure([section], "T", "F", key_column=0.24)
+        badges = [text for _, _, text in self._badge_bounds(fig)]
+        assert [t.get_text() for t in badges] == [self.WIDE_KEY]
+
+    def test_wide_key_does_not_change_the_height(self):
+        """Fitting the column costs description width, not height.
+
+        The description column is narrowed by the fit, so a description
+        wraps into more lines only if the narrowing takes it past a word
+        boundary, and a short one never does.
+        """
+        from mpl_help._figure import _build_help_figure
+
+        sections = [HelpSection("Range", [KeyBinding(self.WIDE_KEY, "brief")])]
+        fitted = _build_help_figure(sections, "T", "F", key_column=0.24)
+        narrow = _build_help_figure(
+            [HelpSection("Range", [KeyBinding("x", "brief")])], "T", "F"
+        )
+        assert fitted.get_size_inches()[1] == pytest.approx(narrow.get_size_inches()[1])
+
+    def test_fit_is_bounded_and_key_wrapped_beyond_the_bound(self):
+        """A key too wide for the widest column is wrapped to fit it."""
+        from mpl_help._figure import (
+            _KEY_COL_MAX,
+            _PANEL_LEFT,
+            _build_help_figure,
+            _fit_key_column,
+            _key_lines,
+        )
+
+        key = " ".join(["verbose"] * 30)
+        sections = [HelpSection("Nav", [KeyBinding(key, "d")])]
+        assert _fit_key_column(sections, 0.24) == pytest.approx(_KEY_COL_MAX)
+        assert len(_key_lines(key, _KEY_COL_MAX)) > 1
+        fig = _build_help_figure(sections, "T", "F")
+        for left, _, text in self._badge_bounds(fig):
+            assert left >= _PANEL_LEFT, text.get_text()
+
+    def test_wrapped_key_grows_its_row(self):
+        from mpl_help._figure import _BINDING_ROW, _binding_height
+
+        key = " ".join(["verbose"] * 30)
+        assert _binding_height(KeyBinding(key, "d"), 0.24) > _BINDING_ROW
+
+    def test_fit_of_no_sections(self):
+        from mpl_help._figure import _fit_key_column
+
+        assert _fit_key_column([], 0.24) == pytest.approx(0.24)
+        assert _fit_key_column([HelpSection("Empty", [])], 0.24) == pytest.approx(0.24)
 
 
 class TestBuildHelpFigure:
