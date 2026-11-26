@@ -19,6 +19,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is not widened beyond 0.6 of the figure width, and a key too wide for
   that column is wrapped onto as many lines as it needs, so that no key can
   be truncated.
+- The box around a section note no longer extends beyond the section panel
+  on each side.  Its margins came from the padding of its boxstyle, which
+  is applied in data coordinates: these span the figure width in x but the
+  rows of the layout in y, so a padding large enough to be seen in y took
+  the box to the edges of the figure in x.  The margins are now part of the
+  geometry of the box, which is aligned with the section panel that it
+  belongs to.
 
 
 ## [0.1.0] — 2026-11-25

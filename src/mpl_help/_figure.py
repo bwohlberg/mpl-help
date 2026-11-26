@@ -52,7 +52,9 @@ _BINDING_LINE = 0.46  # extra rows per wrapped description line
 _PANEL_LEFT = 0.03  # left edge of the section panel (fraction of axes width)
 _PANEL_RIGHT = 0.97  # right edge of the section panel (fraction of axes width)
 _NOTE_LEFT = 0.08  # left edge of note text
-_NOTE_RIGHT = 0.95  # right edge of the note box
+_NOTE_RIGHT = 0.95  # right limit of note text
+_NOTE_BOX_PAD = 0.05  # vertical margin of a note box, in rows
+_NOTE_BOX_ROUND = 0.015  # corner rounding of a note box
 _NOTE_FONTSIZE = 7.5
 _BINDING_FONTSIZE = 8.5
 _KEY_FONTSIZE = 8
@@ -611,11 +613,17 @@ def _build_help_figure(
         if section.note:
             note_h = _note_height(section.note)
             ax.add_patch(
+                # The padding of a boxstyle is in data coordinates, which
+                # span the figure width in x but the rows of the layout in
+                # y, so a padding wide enough to be seen in y takes the box
+                # outside the figure in x. The margins are therefore part of
+                # the geometry of the box here, which aligns it with the
+                # section panel that it belongs to.
                 mpatches.FancyBboxPatch(
-                    (0.05, y - note_h + 0.08),
-                    0.90,
-                    note_h - 0.08,
-                    boxstyle="round,pad=0.05",
+                    (_PANEL_LEFT, y - note_h + 0.08 - _NOTE_BOX_PAD),
+                    _PANEL_RIGHT - _PANEL_LEFT,
+                    note_h - 0.08 + 2 * _NOTE_BOX_PAD,
+                    boxstyle=f"round,pad=0,rounding_size={_NOTE_BOX_ROUND}",
                     facecolor=C["note_bg"],
                     edgecolor=C["note_border"],
                     linewidth=0.5,

@@ -259,6 +259,44 @@ class TestLayout:
                 _section_height(section, key_column)
             )
 
+    def test_note_box_matches_the_section_panel(self):
+        """A note box has the edges of the section panel it belongs to.
+
+        The padding of a boxstyle is in data coordinates, which span the
+        figure width in x but the rows of the layout in y, so a padding
+        large enough to be seen in y took the box outside the figure in x.
+        """
+        import matplotlib.colors as mcolors
+
+        from mpl_help._figure import (
+            _PANEL_LEFT,
+            _PANEL_RIGHT,
+            DEFAULT_PALETTE,
+            _build_help_figure,
+        )
+
+        note = (
+            "The standard matplotlib shortcuts also apply, including s to "
+            "save the figure and f1 for the matplotlib help."
+        )
+        section = HelpSection("Nav", [KeyBinding("x", "y")], note=note)
+        fig = _build_help_figure([section], "T", "F", theme="dark")
+        fig.canvas.draw()
+        axes = fig.axes[0]
+        inverse = axes.transData.inverted()
+        renderer = fig.canvas.get_renderer()
+        note_bg = mcolors.to_hex(DEFAULT_PALETTE["note_bg"][1])
+        boxes = [
+            p for p in axes.patches if mcolors.to_hex(p.get_facecolor()) == note_bg
+        ]
+        assert len(boxes) == 1
+        bbox = boxes[0].get_window_extent(renderer)
+        (left, _), (right, _) = inverse.transform(
+            [(bbox.x0, bbox.y0), (bbox.x1, bbox.y1)]
+        )
+        assert left == pytest.approx(_PANEL_LEFT, abs=0.002)
+        assert right == pytest.approx(_PANEL_RIGHT, abs=0.002)
+
     def test_total_rows_padding(self):
         from mpl_help._figure import _PAD_BOT, _PAD_TOP
 
