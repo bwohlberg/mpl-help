@@ -1,3 +1,10 @@
+[![Python \>= 3.11](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/)
+[![Package License](https://img.shields.io/github/license/bwohlberg/mpl-help.svg)](https://github.com/bwohlberg/mpl-help/blob/main/LICENSE)
+[![Code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Documentation Status](https://readthedocs.org/projects/mpl-help/badge/?version=latest)](http://mpl-help.readthedocs.io/en/latest/?badge=latest)
+[![PyPI package version](https://badge.fury.io/py/mpl-help.svg)](https://badge.fury.io/py/mpl-help)
+
+
 # mpl-help
 
 Backend-independent help windows for [matplotlib](https://matplotlib.org) figures.
